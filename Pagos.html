@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FASTEN — Pagos</title>
+  <link rel="stylesheet" href="Fasten.css" />
+  <style>
+    .pg-toolbar { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .pg-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .pg-metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+    .pg-metric { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 18px; box-shadow:var(--shadow); position:relative; overflow:hidden; }
+    .pg-metric::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:3px 3px 0 0; }
+    .pg-metric.green::before { background:var(--success); }
+    .pg-metric.amber::before { background:var(--warning); }
+    .pg-metric.red::before   { background:var(--danger); }
+    .pg-metric-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted); margin-bottom:5px; }
+    .pg-metric-value { font-size:24px; font-weight:700; color:var(--text-primary); line-height:1; }
+    .pg-metric-sub   { font-size:11px; color:var(--text-secondary); margin-top:4px; }
+    .pg-metric-trend { display:flex; align-items:center; gap:4px; font-size:11px; font-weight:600; margin-top:6px; }
+    .pg-metric-trend.up   { color:var(--success); }
+    .pg-metric-trend.down { color:var(--danger); }
+    .pg-metric-trend svg  { width:12px; height:12px; }
+    .pg-filters { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .pg-search { position:relative; min-width:220px; flex:1; max-width:300px; }
+    .pg-search svg { position:absolute; left:10px; top:50%; transform:translateY(-50%); width:14px; height:14px; color:var(--text-muted); pointer-events:none; }
+    .pg-search input { width:100%; padding:8px 12px 8px 32px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); font-family:var(--font); font-size:13px; color:var(--text-primary); outline:none; transition:border-color var(--transition),box-shadow var(--transition); }
+    .pg-search input:focus { border-color:var(--purple); box-shadow:0 0 0 3px rgba(124,58,237,.12); }
+    .pg-search input::placeholder { color:var(--text-muted); }
+    .pg-select { padding:8px 12px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); font-family:var(--font); font-size:13px; color:var(--text-primary); outline:none; cursor:pointer; transition:border-color var(--transition); }
+    .pg-select:focus { border-color:var(--purple); }
+    .pg-table-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow); overflow:hidden; }
+    .pg-table-header { padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .pg-table-title-wrap { display:flex; align-items:center; gap:10px; }
+    .pg-table-title { font-size:14px; font-weight:600; color:var(--text-primary); }
+    .pg-revision-badge { display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600; background:#EFF6FF; color:#2563EB; cursor:pointer; transition:background var(--transition); }
+    .pg-revision-badge:hover { background:#DBEAFE; }
+    [data-theme="dark"] .pg-revision-badge { background:rgba(59,130,246,.15); color:#60A5FA; }
+    .pg-count { font-size:12px; color:var(--text-muted); }
+    .pg-table-wrap { overflow-x:auto; }
+    .pg-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .pg-table thead th { padding:10px 14px; text-align:left; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted); background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
+    .pg-table tbody tr { border-bottom:1px solid var(--border); transition:background var(--transition); }
+    .pg-table tbody tr:last-child { border-bottom:none; }
+    .pg-table tbody tr:hover { background:var(--surface2); }
+    .pg-table tbody td { padding:11px 14px; vertical-align:middle; }
+    .pg-unit  { font-weight:600; font-size:13px; color:var(--text-primary); }
+    .pg-owner { font-size:11px; color:var(--text-secondary); margin-top:1px; }
+    .pg-valor { font-size:13px; font-weight:700; color:var(--text-primary); white-space:nowrap; }
+    .pg-mora  { font-size:11px; color:var(--danger); font-weight:600; white-space:nowrap; margin-top:2px; }
+    .pg-fecha { font-size:12px; color:var(--text-secondary); white-space:nowrap; }
+    .pg-fecha.vencida { color:var(--danger); font-weight:600; }
+    .estado { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap; position:relative; cursor:default; }
+    .estado-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+    .estado::after { content:attr(data-tip); position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:#1a1030; color:#fff; font-size:11px; font-weight:400; padding:5px 10px; border-radius:6px; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .15s ease; z-index:100; border:1px solid rgba(255,255,255,.1); }
+    .estado::before { content:''; position:absolute; bottom:calc(100% + 1px); left:50%; transform:translateX(-50%); border:4px solid transparent; border-top-color:#1a1030; opacity:0; pointer-events:none; transition:opacity .15s ease; z-index:100; }
+    .estado:hover::after,.estado:hover::before { opacity:1; }
+    .estado-pendiente { background:#FFFBEB; color:#D97706; }
+    .estado-revision  { background:#EFF6FF; color:#2563EB; }
+    .estado-rechazado { background:#FFF1F2; color:#E11D48; }
+    .estado-pagado    { background:#ECFDF5; color:#059669; }
+    .estado-mora      { background:#FEF2F2; color:#DC2626; }
+    .estado-cancelado { background:var(--surface2); color:var(--text-muted); }
+    [data-theme="dark"] .estado-pendiente { background:rgba(245,158,11,.15); color:#FCD34D; }
+    [data-theme="dark"] .estado-revision  { background:rgba(59,130,246,.15);  color:#60A5FA; }
+    [data-theme="dark"] .estado-rechazado { background:rgba(225,29,72,.15);   color:#FB7185; }
+    [data-theme="dark"] .estado-pagado    { background:rgba(16,185,129,.15);  color:#34D399; }
+    [data-theme="dark"] .estado-mora      { background:rgba(239,68,68,.15);   color:#F87171; }
+    [data-theme="dark"] .estado-cancelado { background:rgba(255,255,255,.06); color:var(--text-muted); }
+    .pg-row-actions { display:flex; align-items:center; gap:4px; opacity:0; transition:opacity var(--transition); }
+    .pg-table tbody tr:hover .pg-row-actions { opacity:1; }
+    .pg-row-btn { width:28px; height:28px; border-radius:6px; background:transparent; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-secondary); transition:all var(--transition); position:relative; }
+    .pg-row-btn:hover { background:var(--purple-dim); color:var(--purple); border-color:var(--purple); }
+    .pg-row-btn svg { width:13px; height:13px; }
+    .pg-row-btn::after { content:attr(data-tip); position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:#1a1030; color:#fff; font-size:11px; padding:4px 8px; border-radius:5px; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .15s; z-index:100; border:1px solid rgba(255,255,255,.1); }
+    .pg-row-btn:hover::after { opacity:1; }
+    .pg-pagination { display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-top:1px solid var(--border); font-size:12px; color:var(--text-secondary); flex-wrap:wrap; gap:10px; }
+    .pg-pag-btns { display:flex; gap:4px; }
+    .pg-pag-btn { width:30px; height:30px; border-radius:6px; background:var(--surface2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:12px; font-weight:500; color:var(--text-primary); transition:all var(--transition); }
+    .pg-pag-btn:hover  { background:var(--purple-dim); color:var(--purple); border-color:var(--purple); }
+    .pg-pag-btn.active { background:var(--purple); color:#fff; border-color:var(--purple); }
+    .pg-pag-btn svg { width:13px; height:13px; }
+    .modal-lg { max-width:540px; }
+    .comprobante-box { width:100%; padding:20px; background:var(--surface2); border:2px dashed var(--border); border-radius:var(--radius-sm); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:var(--text-muted); font-size:13px; text-align:center; }
+    .comprobante-box svg { width:26px; height:26px; }
+    .comprobante-name { font-weight:500; color:var(--text-primary); }
+    .wizard-steps { display:flex; border-bottom:1px solid var(--border); margin:-18px -20px 20px; padding:0 20px; }
+    .wizard-step { padding:12px 16px; font-size:12px; font-weight:600; color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-1px; cursor:default; }
+    .wizard-step.active { color:var(--purple); border-bottom-color:var(--purple); }
+    .wizard-step.done   { color:var(--success); }
+    .more-dropdown { position:fixed; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-md); min-width:180px; overflow:hidden; opacity:0; pointer-events:none; transform:translateY(-4px); transition:opacity .15s,transform .15s; z-index:500; }
+    .more-dropdown.open { opacity:1; pointer-events:all; transform:translateY(0); }
+    .more-item { display:flex; align-items:center; gap:10px; padding:9px 14px; font-size:13px; color:var(--text-primary); cursor:pointer; transition:background var(--transition); }
+    .more-item:hover { background:var(--surface2); }
+    .more-item.danger { color:var(--danger); }
+    .more-item.danger:hover { background:#FEF2F2; }
+    [data-theme="dark"] .more-item.danger:hover { background:rgba(239,68,68,.1); }
+    .more-item svg { width:14px; height:14px; }
+    @media (max-width:767px) {
+      .pg-toolbar { flex-direction:column; align-items:flex-start; }
+      .pg-actions { width:100%; }
+      .pg-actions .btn { flex:1; justify-content:center; font-size:11px; padding:6px 8px; }
+      .pg-metrics { grid-template-columns:1fr 1fr; gap:10px; }
+      .pg-metrics .pg-metric:last-child { grid-column:1 / -1; }
+      .pg-filters { flex-direction:column; align-items:stretch; }
+      .pg-search  { max-width:100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-toggle" onclick="toggleSidebar()"><i data-lucide="chevron-right"></i></div>
+    <div class="sidebar-inner">
+      <div class="sidebar-logo"><div class="logo-mark">F</div><span class="logo-name">FASTEN</span></div>
+      <nav class="sidebar-nav">
+        <a href="index.html"     class="nav-item" data-label="index"><i data-lucide="layout-index"></i><span class="nav-label">index</span></a>
+        <a href="pagos.html"         class="nav-item active" data-label="Pagos"><i data-lucide="credit-card"></i><span class="nav-label">Pagos</span><span class="nav-badge">3</span></a>
+        <a href="publicaciones.html" class="nav-item" data-label="Publicaciones"><i data-lucide="megaphone"></i><span class="nav-label">Publicaciones</span></a>
+        <a href="solicitudes.html"   class="nav-item" data-label="Solicitudes"><i data-lucide="message-square-warning"></i><span class="nav-label">Solicitudes</span><span class="nav-badge">7</span></a>
+        <a href="reservas.html"      class="nav-item" data-label="Reservas"><i data-lucide="calendar-check"></i><span class="nav-label">Reservas</span></a>
+      </nav>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-footer">
+        <div class="conjunto-info">
+          <div class="conjunto-icon"><i data-lucide="building-2"></i></div>
+          <div class="conjunto-texts"><div class="conjunto-name">Los Pinos</div></div>
+        </div>
+        <div class="user-trigger" id="userTrigger" onclick="toggleUserMenu()">
+          <div class="user-avatar">GP</div>
+          <div class="user-texts"><div class="user-name">Gustavo Petro</div><div class="user-role">Administrador</div></div>
+          <i data-lucide="chevron-up" class="user-chevron"></i>
+          <div class="user-dropdown" id="userDropdown">
+            <div class="dropdown-user-info"><div class="dropdown-user-name">Gustavo Petro</div><div class="dropdown-user-email">gpetro@lospinos.co</div></div>
+            <a href="configuracion.html" class="dropdown-item"><i data-lucide="settings-2"></i>Configuración</a>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item danger"><i data-lucide="log-out"></i>Cerrar sesión</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <header class="mobile-header">
+    <div class="mobile-logo"><div class="logo-mark">F</div><span class="mobile-logo-name">FASTEN</span></div>
+    <div class="mobile-header-right">
+      <span class="mobile-conjunto-pill">Los Pinos</span>
+      <div class="mobile-user-btn" id="mobileUserBtn" onclick="toggleMobileMenu()">
+        GP
+        <div class="mobile-user-dropdown" id="mobileUserMenu">
+          <div class="dropdown-user-info"><div class="dropdown-user-name">Gustavo Petro</div><div class="dropdown-user-email">gpetro@lospinos.co</div></div>
+          <a href="configuracion.html" class="dropdown-item"><i data-lucide="settings-2"></i>Configuración</a>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-item danger"><i data-lucide="log-out"></i>Cerrar sesión</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="bottom-nav">
+    <a href="index.html"     class="bottom-nav-item"><i data-lucide="layout-index"></i><span class="bottom-nav-label">Inicio</span></a>
+    <a href="pagos.html"         class="bottom-nav-item active"><i data-lucide="credit-card"></i><span class="bottom-nav-label">Pagos</span><span class="bottom-nav-badge">3</span></a>
+    <a href="publicaciones.html" class="bottom-nav-item"><i data-lucide="megaphone"></i><span class="bottom-nav-label">Noticias</span></a>
+    <a href="solicitudes.html"   class="bottom-nav-item"><i data-lucide="message-square-warning"></i><span class="bottom-nav-label">Solicitudes</span><span class="bottom-nav-badge">7</span></a>
+    <a href="reservas.html"      class="bottom-nav-item"><i data-lucide="calendar-check"></i><span class="bottom-nav-label">Reservas</span></a>
+  </nav>
+
+  <div class="main-wrapper" id="mainWrapper">
+    <main class="main">
+
+      <div class="pg-toolbar">
+        <div>
+          <h1 class="page-title">Pagos</h1>
+          <p class="page-subtitle">Gestiona los cargos y comprobantes del conjunto</p>
+        </div>
+        <div class="pg-actions">
+          <button class="btn btn-secondary btn-sm" onclick="openModal('modalCobro')"><i data-lucide="send"></i>Cobro masivo</button>
+          <button class="btn btn-secondary btn-sm" onclick="openModal('modalCrearCargo')"><i data-lucide="plus-circle"></i>Crear cargo</button>
+          <button class="btn btn-primary btn-sm" onclick="openModal('modalPazSalvo')"><i data-lucide="file-check"></i>Paz y salvo</button>
+        </div>
+      </div>
+
+      <div class="pg-metrics">
+        <div class="pg-metric green">
+          <div class="pg-metric-label">Recaudado este mes</div>
+          <div class="pg-metric-value">$28.475.000</div>
+          <div class="pg-metric-sub">32 pagos confirmados</div>
+          <div class="pg-metric-trend up"><i data-lucide="arrow-up-right"></i>5.3% vs mes anterior</div>
+        </div>
+        <div class="pg-metric amber">
+          <div class="pg-metric-label">Pendiente de cobrar</div>
+          <div class="pg-metric-value">$1.200.000</div>
+          <div class="pg-metric-sub">8 unidades · dentro de fecha</div>
+          <div class="pg-metric-trend down"><i data-lucide="clock"></i>Vence en 7 días</div>
+        </div>
+        <div class="pg-metric red">
+          <div class="pg-metric-label">En mora</div>
+          <div class="pg-metric-value">$3.850.000</div>
+          <div class="pg-metric-sub">10 unidades · mora acumulada incluida</div>
+          <div class="pg-metric-trend down"><i data-lucide="arrow-up-right"></i>$210.000 de mora este mes</div>
+        </div>
+      </div>
+
+      <div class="pg-filters">
+        <div class="pg-search">
+          <i data-lucide="search"></i>
+          <input type="text" placeholder="Buscar unidad o propietario..." id="pgSearch" oninput="filtrar()" />
+        </div>
+        <select class="pg-select" id="pgEstado" onchange="filtrar()">
+          <option value="">Todos los estados</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="revision">En revisión</option>
+          <option value="rechazado">Rechazado</option>
+          <option value="pagado">Pagado</option>
+          <option value="mora">En mora</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+        <select class="pg-select" id="pgConcepto" onchange="filtrar()">
+          <option value="">Todos los conceptos</option>
+          <option value="admin">Cuota administración</option>
+          <option value="reserva">Reserva espacio</option>
+          <option value="multa">Multa / Cargo</option>
+        </select>
+        <select class="pg-select" id="pgMes" onchange="filtrar()">
+          <option value="">Todos los meses</option>
+          <option value="01">Enero</option>
+          <option value="02">Febrero</option>
+          <option value="03">Marzo</option>
+          <option value="04">Abril</option>
+          <option value="05" selected>Mayo</option>
+          <option value="06">Junio</option>
+          <option value="07">Julio</option>
+          <option value="08">Agosto</option>
+          <option value="09">Septiembre</option>
+          <option value="10">Octubre</option>
+          <option value="11">Noviembre</option>
+          <option value="12">Diciembre</option>
+        </select>
+        <select class="pg-select" id="pgAno" onchange="filtrar()">
+          <option value="">Todos los años</option>
+          <option value="2025">2025</option>
+          <option value="2026" selected>2026</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="limpiar()"><i data-lucide="x"></i>Limpiar</button>
+      </div>
+
+      <div class="pg-table-card">
+        <div class="pg-table-header">
+          <div class="pg-table-title-wrap">
+            <span class="pg-table-title">Cargos</span>
+            <span class="pg-revision-badge" onclick="filtrarRevision()">
+              <i data-lucide="clock" style="width:11px;height:11px;"></i>3 por revisar
+            </span>
+          </div>
+          <span class="pg-count" id="pgCount"></span>
+        </div>
+        <div class="pg-table-wrap">
+          <table class="pg-table">
+            <thead>
+              <tr>
+                <th>Unidad</th><th>Concepto</th><th>Valor</th><th>Mora</th>
+                <th>Fecha límite</th><th>Estado</th>
+                <th style="text-align:center;width:110px;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="pgTbody"></tbody>
+          </table>
+        </div>
+        <div class="pg-pagination">
+          <span id="pgPagInfo"></span>
+          <div class="pg-pag-btns">
+            <button class="pg-pag-btn"><i data-lucide="chevron-left"></i></button>
+            <button class="pg-pag-btn active">1</button>
+            <button class="pg-pag-btn">2</button>
+            <button class="pg-pag-btn">3</button>
+            <button class="pg-pag-btn">…</button>
+            <button class="pg-pag-btn">6</button>
+            <button class="pg-pag-btn"><i data-lucide="chevron-right"></i></button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="more-dropdown" id="moreDropdown">
+  <div class="more-item" onclick="closeMore()"><i data-lucide="send"></i>Enviar recordatorio</div>
+  <div class="more-item" onclick="closeMore()"><i data-lucide="history"></i>Ver historial del cargo</div>
+  <div class="more-item danger" onclick="closeMore()"><i data-lucide="x-circle"></i>Cancelar cargo</div>
+</div>
+
+<!-- MODAL: Cobro masivo -->
+<div class="modal-overlay" id="modalCobro">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Cobro masivo</span>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modalCobro');resetWizard()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="wizard-steps">
+        <div class="wizard-step active" id="wStep1">1 · Configurar cargo</div>
+        <div class="wizard-step" id="wStep2">2 · Notificación</div>
+      </div>
+      <div id="wizardP1">
+        <div class="form-group"><label class="form-label">Concepto</label><input class="form-control" value="Cuota de administración Mayo 2026" /></div>
+        <div class="form-group"><label class="form-label">Valor por unidad</label><input class="form-control" type="number" value="150000" /></div>
+        <div class="form-group"><label class="form-label">Fecha límite de pago</label><input class="form-control" type="date" value="2026-05-15" /></div>
+        <div class="form-group"><label class="form-label">Generar para</label><select class="form-control"><option>Todas las unidades (50)</option><option>Solo unidades activas (48)</option></select></div>
+      </div>
+      <div id="wizardP2" style="display:none;">
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Se generaron <strong style="color:var(--text-primary);">50 cargos</strong> correctamente. ¿Deseas notificar a los residentes ahora?</p>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" checked style="width:15px;height:15px;accent-color:var(--purple);" />Notificar por correo electrónico</label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" checked style="width:15px;height:15px;accent-color:var(--purple);" />Enviar notificación push (app móvil)</label>
+        </div>
+        <div style="margin-top:16px;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);font-size:12px;color:var(--text-secondary);display:flex;gap:8px;align-items:flex-start;">
+          <i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;margin-top:1px;color:var(--info);"></i>La mora se calculará automáticamente desde el día siguiente al vencimiento.
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalCobro');resetWizard()">Cancelar</button>
+      <button class="btn btn-primary" id="wizardBtn" onclick="wizardNext()"><i data-lucide="arrow-right"></i>Continuar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Crear cargo -->
+<div class="modal-overlay" id="modalCrearCargo">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Crear cargo individual</span><button class="btn btn-ghost btn-icon" onclick="closeModal('modalCrearCargo')"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Unidad</label><select class="form-control"><option value="">Seleccionar unidad...</option><option>Apt. 101 — Carlos Medina</option><option>Apt. 204 — Andrés Jaramillo</option><option>Casa 50 — Marta Hernández</option><option>Apt. 96 — Julián Trujillo</option><option>Apt. 106 — Andrea Villa</option></select></div>
+      <div class="form-group"><label class="form-label">Tipo de cargo</label><select class="form-control"><option>Multa</option><option>Daño en área común</option><option>Cargo por reserva</option><option>Cuota extraordinaria</option><option>Otro</option></select></div>
+      <div class="form-group"><label class="form-label">Descripción</label><input class="form-control" placeholder="Ej: Daño puerta salón comunal..." /></div>
+      <div class="form-group"><label class="form-label">Valor</label><input class="form-control" type="number" placeholder="0" /></div>
+      <div class="form-group"><label class="form-label">Fecha límite de pago</label><input class="form-control" type="date" /></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:13px;color:var(--text-primary);">Aplica mora por vencimiento</span><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modalCrearCargo')">Cancelar</button><button class="btn btn-primary"><i data-lucide="plus-circle"></i>Crear cargo</button></div>
+  </div>
+</div>
+
+<!-- MODAL: Validar comprobante -->
+<div class="modal-overlay" id="modalValidarPago">
+  <div class="modal modal-lg">
+    <div class="modal-header"><span class="modal-title">Validar comprobante</span><button class="btn btn-ghost btn-icon" onclick="closeModal('modalValidarPago')"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group"><label class="form-label">Unidad</label><input class="form-control" id="valUnidad" readonly style="background:var(--surface2);" /></div>
+        <div class="form-group"><label class="form-label">Propietario</label><input class="form-control" id="valPropietario" readonly style="background:var(--surface2);" /></div>
+        <div class="form-group"><label class="form-label">Concepto</label><input class="form-control" id="valConcepto" readonly style="background:var(--surface2);" /></div>
+        <div class="form-group"><label class="form-label">Valor</label><input class="form-control" id="valValor" readonly style="background:var(--surface2);" /></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Comprobante adjunto</label>
+        <div class="comprobante-box"><i data-lucide="file-image"></i><span class="comprobante-name" id="valArchivo">comprobante.jpg</span><button class="btn btn-secondary btn-sm" style="margin-top:4px;"><i data-lucide="eye"></i>Ver comprobante</button></div>
+      </div>
+      <div class="form-group"><label class="form-label">Observación (opcional)</label><input class="form-control" placeholder="Ej: Verificado con extracto bancario..." /></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalValidarPago')">Cancelar</button>
+      <button class="btn btn-danger btn-sm" onclick="closeModal('modalValidarPago')"><i data-lucide="x-circle"></i>Rechazar</button>
+      <button class="btn btn-primary" onclick="closeModal('modalValidarPago')"><i data-lucide="check-circle"></i>Confirmar pago</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Editar cargo -->
+<div class="modal-overlay" id="modalEditarCargo">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Editar cargo</span><button class="btn btn-ghost btn-icon" onclick="closeModal('modalEditarCargo')"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Concepto</label><input class="form-control" id="editConcepto" /></div>
+      <div class="form-group"><label class="form-label">Valor</label><input class="form-control" type="number" id="editValor" /></div>
+      <div class="form-group"><label class="form-label">Fecha límite</label><input class="form-control" type="date" id="editFecha" /></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modalEditarCargo')">Cancelar</button><button class="btn btn-primary" onclick="closeModal('modalEditarCargo')"><i data-lucide="save"></i>Guardar cambios</button></div>
+  </div>
+</div>
+
+<!-- MODAL: Paz y salvo -->
+<div class="modal-overlay" id="modalPazSalvo">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Generar paz y salvo</span><button class="btn btn-ghost btn-icon" onclick="closeModal('modalPazSalvo')"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Unidad</label>
+        <select class="form-control" onchange="checkPazSalvo(this)">
+          <option value="">Seleccionar unidad...</option>
+          <option value="ok">Apt. 101 — Carlos Medina</option>
+          <option value="ok">Apt. 312 — Samuel Cáceres</option>
+          <option value="mora">Apt. 204 — Andrés Jaramillo</option>
+          <option value="mora">Casa 50 — Marta Hernández</option>
+        </select>
+      </div>
+      <div id="pazSalvoStatus"></div>
+      <div class="form-group"><label class="form-label">Propósito</label><select class="form-control"><option>Venta del inmueble</option><option>Arrendamiento</option><option>Trámite bancario</option><option>Otro</option></select></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modalPazSalvo')">Cancelar</button><button class="btn btn-primary" id="btnPazSalvo"><i data-lucide="download"></i>Descargar PDF</button></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script>
+  lucide.createIcons();
+  document.body.classList.add('sidebar-init');
+  const sidebar = document.getElementById('sidebar');
+  function toggleSidebar() { sidebar.classList.toggle('open'); localStorage.setItem('fasten-sidebar', sidebar.classList.contains('open') ? 'open' : 'closed'); }
+  if (localStorage.getItem('fasten-sidebar') === 'open') sidebar.classList.add('open');
+  requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove('sidebar-init')));
+  const userTrigger  = document.getElementById('userTrigger');
+  const userDropdown = document.getElementById('userDropdown');
+  function toggleUserMenu() {
+    const isOpen = userDropdown.classList.toggle('open');
+    userTrigger.classList.toggle('menu-open');
+    if (isOpen) { const r = userTrigger.getBoundingClientRect(); userDropdown.style.bottom=(window.innerHeight-r.top+8)+'px'; userDropdown.style.left=r.left+'px'; userDropdown.style.width=Math.max(r.width,210)+'px'; }
+  }
+  document.addEventListener('click', e => {
+    if (!userTrigger.contains(e.target)) { userDropdown.classList.remove('open'); userTrigger.classList.remove('menu-open'); }
+    const mb = document.getElementById('mobileUserBtn');
+    if (mb && !mb.contains(e.target)) document.getElementById('mobileUserMenu').classList.remove('open');
+    if (!e.target.closest('.pg-row-btn[data-more]') && !e.target.closest('#moreDropdown')) closeMore();
+  });
+  function toggleMobileMenu() { document.getElementById('mobileUserMenu').classList.toggle('open'); }
+  const savedTheme = localStorage.getItem('fasten-theme');
+  if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+  function openModal(id)  { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+  document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', e => { if (e.target===m) { m.classList.remove('open'); resetWizard(); } }); });
+  let wizardStep = 1;
+  function wizardNext() {
+    if (wizardStep===1) {
+      wizardStep=2;
+      document.getElementById('wizardP1').style.display='none';
+      document.getElementById('wizardP2').style.display='block';
+      document.getElementById('wStep1').classList.replace('active','done');
+      document.getElementById('wStep2').classList.add('active');
+      document.getElementById('wizardBtn').innerHTML='<i data-lucide="send"></i>Notificar y finalizar';
+      lucide.createIcons();
+    } else { closeModal('modalCobro'); resetWizard(); }
+  }
+  function resetWizard() {
+    wizardStep=1;
+    document.getElementById('wizardP1').style.display='block';
+    document.getElementById('wizardP2').style.display='none';
+    document.getElementById('wStep1').className='wizard-step active';
+    document.getElementById('wStep2').className='wizard-step';
+    document.getElementById('wizardBtn').innerHTML='<i data-lucide="arrow-right"></i>Continuar';
+    lucide.createIcons();
+  }
+  function checkPazSalvo(sel) {
+    const status=document.getElementById('pazSalvoStatus');
+    const btn=document.getElementById('btnPazSalvo');
+    if (!sel.value) { status.innerHTML=''; return; }
+    if (sel.value==='ok') {
+      status.innerHTML='<div style="padding:10px 12px;background:#ECFDF5;border:1px solid #D1FAE5;border-radius:var(--radius-sm);font-size:12px;color:#059669;display:flex;gap:8px;align-items:center;margin-bottom:12px;"><i data-lucide="check-circle" style="width:14px;height:14px;flex-shrink:0;"></i>Unidad al día. Se puede emitir paz y salvo.</div>';
+      btn.disabled=false;
+    } else {
+      status.innerHTML='<div style="padding:10px 12px;background:#FEF2F2;border:1px solid #FECACA;border-radius:var(--radius-sm);font-size:12px;color:#DC2626;display:flex;gap:8px;align-items:center;margin-bottom:12px;"><i data-lucide="x-circle" style="width:14px;height:14px;flex-shrink:0;"></i>Unidad con pagos pendientes o en mora. No se puede emitir paz y salvo.</div>';
+      btn.disabled=true;
+    }
+    lucide.createIcons();
+  }
+  function openMore(btn,idx) { const dd=document.getElementById('moreDropdown'); const r=btn.getBoundingClientRect(); dd.style.top=(r.bottom+4)+'px'; dd.style.left=(r.left-120)+'px'; dd.classList.add('open'); }
+  function closeMore() { document.getElementById('moreDropdown').classList.remove('open'); }
+  const MORA_MENSUAL=0.01996;
+  const HOY=new Date('2026-05-20');
+  function calcMora(valor,fechaLimite,estado) {
+    if (['pagado','pendiente','revision','cancelado'].includes(estado)) return 0;
+    const limite=new Date(fechaLimite);
+    if (HOY<=limite) return 0;
+    const dias=Math.floor((HOY-limite)/86400000);
+    return Math.round(valor*(MORA_MENSUAL/30)*dias);
+  }
+  const cargos=[
+    {unidad:'Apt. 101',propietario:'Carlos Medina',   concepto:'Cuota administración May 2026',tipo:'admin',  valor:150000,fechaLimite:'2026-05-15',estado:'pagado',   archivo:'recibo_101_may.pdf'},
+    {unidad:'Apt. 204',propietario:'Andrés Jaramillo',concepto:'Cuota administración May 2026',tipo:'admin',  valor:150000,fechaLimite:'2026-04-15',estado:'mora',     archivo:null},
+    {unidad:'Apt. 204',propietario:'Andrés Jaramillo',concepto:'Multa — ruido nocturno',       tipo:'multa',  valor:100000,fechaLimite:'2026-05-10',estado:'mora',     archivo:null},
+    {unidad:'Casa 50', propietario:'Marta Hernández', concepto:'Cuota administración May 2026',tipo:'admin',  valor:150000,fechaLimite:'2026-04-15',estado:'mora',     archivo:null},
+    {unidad:'Apt. 96', propietario:'Julián Trujillo', concepto:'Cuota administración May 2026',tipo:'admin',  valor:150000,fechaLimite:'2026-04-15',estado:'mora',     archivo:null},
+    {unidad:'Apt. 106',propietario:'Andrea Villa',    concepto:'Cuota administración May 2026',tipo:'admin',  valor:150000,fechaLimite:'2026-04-15',estado:'mora',     archivo:null},
+    {unidad:'Apt. 312',propietario:'Samuel Cáceres',  concepto:'Reserva salón comunal',        tipo:'reserva',valor:80000, fechaLimite:'2026-05-25',estado:'revision', archivo:'comp_312_salon.jpg'},
+    {unidad:'Apt. 312',propietario:'Samuel Cáceres',  concepto:'Cuota administración May 2026',tipo:'admin',  valor:150000,fechaLimite:'2026-05-15',estado:'pagado',   archivo:'recibo_312_may.pdf'},
+    {unidad:'Apt. 108',propietario:'María Torres',    concepto:'Cuota administración May 2026',tipo:'admin',  valor:150000,fechaLimite:'2026-05-15',estado:'revision', archivo:'comp_108_may.jpg'},
+    {unidad:'Apt. 108',propietario:'María Torres',    concepto:'Cuota administración Abr 2026',tipo:'admin',  valor:150000,fechaLimite:'2026-04-15',estado:'rechazado',archivo:'comp_108_abr.jpg'},
+    {unidad:'Casa 12', propietario:'Jorge Ramírez',   concepto:'Cuota administración May 2026',tipo:'admin',  valor:150000,fechaLimite:'2026-05-27',estado:'pendiente',archivo:null},
+    {unidad:'Apt. 205',propietario:'Lucía Fernández', concepto:'Daño área común',              tipo:'multa',  valor:250000,fechaLimite:'2026-05-30',estado:'pendiente',archivo:null},
+  ];
+  const estadoBadge={
+    pendiente:{cls:'estado-pendiente',dot:'#D97706',label:'Pendiente',  tip:'Cargo generado, sin acción del residente'},
+    revision: {cls:'estado-revision', dot:'#2563EB',label:'En revisión',tip:'Comprobante subido, pendiente de validar'},
+    rechazado:{cls:'estado-rechazado',dot:'#E11D48',label:'Rechazado',  tip:'Comprobante inválido — residente debe reintentar'},
+    pagado:   {cls:'estado-pagado',   dot:'#059669',label:'Pagado',     tip:'Pago confirmado — factura generada'},
+    mora:     {cls:'estado-mora',     dot:'#DC2626',label:'En mora',    tip:'Venció sin pago confirmado — mora acumulando'},
+    cancelado:{cls:'estado-cancelado',dot:'#A09CB5',label:'Cancelado',  tip:'Cargo anulado por el administrador'},
+  };
+  function fmt(v){return '$'+v.toLocaleString('es-CO');}
+  function abrirValidar(c){
+    document.getElementById('valUnidad').value=c.unidad;
+    document.getElementById('valPropietario').value=c.propietario;
+    document.getElementById('valConcepto').value=c.concepto;
+    document.getElementById('valValor').value=fmt(c.valor);
+    document.getElementById('valArchivo').textContent=c.archivo||'—';
+    openModal('modalValidarPago');
+  }
+  function abrirEditar(c){
+    document.getElementById('editConcepto').value=c.concepto;
+    document.getElementById('editValor').value=c.valor;
+    document.getElementById('editFecha').value=c.fechaLimite;
+    openModal('modalEditarCargo');
+  }
+  function renderTabla(data){
+    const tbody=document.getElementById('pgTbody');
+    tbody.innerHTML=data.map((c,i)=>{
+      const mora=calcMora(c.valor,c.fechaLimite,c.estado);
+      const vencida=new Date(c.fechaLimite)<HOY&&!['pagado','cancelado'].includes(c.estado);
+      const b=estadoBadge[c.estado];
+      const accionValidar=c.estado==='revision'?`<button class="pg-row-btn" data-tip="Validar comprobante" onclick='abrirValidar(${JSON.stringify(c).replace(/'/g,"\'")})'><i data-lucide="check-circle"></i></button>`:'';
+      const accionFactura=c.estado==='pagado'?'<button class="pg-row-btn" data-tip="Descargar factura"><i data-lucide="download"></i></button>':'';
+      const accionEditar=!['pagado','cancelado'].includes(c.estado)?`<button class="pg-row-btn" data-tip="Editar cargo" onclick='abrirEditar(${JSON.stringify(c).replace(/'/g,"\'")})'><i data-lucide="pencil"></i></button>`:'';
+      return `<tr>
+        <td><div class="pg-unit">${c.unidad}</div><div class="pg-owner">${c.propietario}</div></td>
+        <td style="font-size:13px;color:var(--text-primary);max-width:220px;">${c.concepto}</td>
+        <td><div class="pg-valor">${fmt(c.valor)}</div>${mora>0?`<div class="pg-mora">+${fmt(mora)} mora</div>`:''}</td>
+        <td>${mora>0?`<span style="font-size:12px;font-weight:700;color:var(--danger);">${fmt(mora)}</span>`:`<span style="font-size:12px;color:var(--text-muted);">—</span>`}</td>
+        <td><span class="pg-fecha${vencida?' vencida':''}">${c.fechaLimite}</span></td>
+        <td><span class="estado ${b.cls}" data-tip="${b.tip}"><span class="estado-dot" style="background:${b.dot};"></span>${b.label}</span></td>
+        <td><div class="pg-row-actions" style="justify-content:center;">${accionValidar}${accionFactura}${accionEditar}<button class="pg-row-btn" data-tip="Más opciones" data-more="1" onclick="openMore(this,${i})"><i data-lucide="more-horizontal"></i></button></div></td>
+      </tr>`;
+    }).join('');
+    document.getElementById('pgCount').textContent=`${data.length} de ${cargos.length} cargos`;
+    document.getElementById('pgPagInfo').textContent=`Mostrando ${data.length} de ${cargos.length} cargos`;
+    lucide.createIcons();
+  }
+  function filtrar(){
+    const busq=document.getElementById('pgSearch').value.toLowerCase();
+    const estado=document.getElementById('pgEstado').value;
+    const conc=document.getElementById('pgConcepto').value;
+    const mes=document.getElementById('pgMes').value;
+    const ano=document.getElementById('pgAno').value;
+    const result=cargos.filter(c=>{
+      const matchBusq=!busq||c.unidad.toLowerCase().includes(busq)||c.propietario.toLowerCase().includes(busq);
+      const matchEstado=!estado||c.estado===estado;
+      const matchConc=!conc||c.tipo===conc;
+      const matchAno=!ano||c.fechaLimite.startsWith(ano);
+      const matchMes=!mes||c.fechaLimite.substring(5,7)===mes;
+      return matchBusq&&matchEstado&&matchConc&&matchAno&&matchMes;
+    });
+    renderTabla(result);
+  }
+  function filtrarRevision(){document.getElementById('pgEstado').value='revision';filtrar();}
+  function limpiar(){
+    document.getElementById('pgSearch').value='';
+    document.getElementById('pgEstado').value='';
+    document.getElementById('pgConcepto').value='';
+    document.getElementById('pgMes').value='05';
+    document.getElementById('pgAno').value='2026';
+    renderTabla(cargos);
+  }
+  renderTabla(cargos);
+</script>
+</body>
+</html>

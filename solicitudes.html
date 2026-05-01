@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FASTEN — Solicitudes</title>
+  <link rel="stylesheet" href="Fasten.css" />
+  <style>
+    .sol-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      grid-template-rows: 1fr;
+      gap: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      height: calc(100vh - 185px);
+      min-height: 480px;
+    }
+
+    /* Lista */
+    .sol-list-panel { border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+    .sol-list-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+    .sol-list-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .sol-list-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+
+    .sol-search { position: relative; }
+    .sol-search svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); width: 13px; height: 13px; color: var(--text-muted); pointer-events: none; }
+    .sol-search input { width: 100%; padding: 7px 10px 7px 28px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 12px; color: var(--text-primary); outline: none; transition: border-color var(--transition); }
+    .sol-search input:focus { border-color: var(--purple); }
+    .sol-search input::placeholder { color: var(--text-muted); }
+
+    .sol-tabs { display: flex; gap: 2px; background: var(--surface2); border-radius: var(--radius-sm); padding: 2px; border: 1px solid var(--border); }
+    .sol-tab { flex: 1; padding: 5px 8px; border-radius: 5px; font-size: 11px; font-weight: 600; color: var(--text-secondary); cursor: pointer; text-align: center; transition: all var(--transition); white-space: nowrap; }
+    .sol-tab.active { background: var(--surface); color: var(--purple); box-shadow: var(--shadow); }
+
+    .sol-list { flex: 1; overflow-y: auto; min-height: 0; }
+
+    .sol-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background var(--transition); }
+    .sol-item:last-child { border-bottom: none; }
+    .sol-item:hover { background: var(--surface2); }
+    .sol-item.active { background: var(--purple-dim); }
+    [data-theme="dark"] .sol-item.active { background: rgba(124,58,237,.12); }
+
+    .sol-item-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--purple); flex-shrink: 0; margin-top: 5px; }
+    .sol-item-dot.read { background: transparent; border: 1.5px solid var(--border); }
+
+    .sol-item-body { flex: 1; min-width: 0; }
+    .sol-item-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+    .sol-item-unit { font-size: 12px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sol-item-time { font-size: 10px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+    .sol-item-asunto { font-size: 12px; color: var(--text-primary); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+    .sol-item-preview { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    .sol-item-badges { display: flex; align-items: center; gap: 4px; margin-top: 5px; flex-wrap: wrap; }
+
+    /* Estados */
+    .sol-estado { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+    .sol-estado-dot { width: 5px; height: 5px; border-radius: 50%; }
+    .sol-e-recibida { background: #EFF6FF; color: #2563EB; }
+    .sol-e-gestion  { background: #F5F3FF; color: #7C3AED; }
+    .sol-e-info     { background: #FFFBEB; color: #D97706; }
+    .sol-e-resuelta { background: #ECFDF5; color: #059669; }
+    .sol-e-cerrada  { background: var(--surface2); color: var(--text-muted); }
+    [data-theme="dark"] .sol-e-recibida { background: rgba(59,130,246,.15);  color: #60A5FA; }
+    [data-theme="dark"] .sol-e-gestion  { background: rgba(124,58,237,.15); color: #A78BFA; }
+    [data-theme="dark"] .sol-e-info     { background: rgba(245,158,11,.15); color: #FCD34D; }
+    [data-theme="dark"] .sol-e-resuelta { background: rgba(16,185,129,.15); color: #34D399; }
+    [data-theme="dark"] .sol-e-cerrada  { background: rgba(255,255,255,.06); color: var(--text-muted); }
+
+    .sol-tipo-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+    .sol-tipo-queja     { background: #FEF2F2; color: #DC2626; }
+    .sol-tipo-solicitud { background: #EFF6FF; color: #2563EB; }
+    [data-theme="dark"] .sol-tipo-queja     { background: rgba(239,68,68,.15);  color: #F87171; }
+    [data-theme="dark"] .sol-tipo-solicitud { background: rgba(59,130,246,.15); color: #60A5FA; }
+
+    /* Detalle */
+    .sol-detail-panel { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+    .sol-detail-panel.entering { animation: slideIn .2s ease both; }
+    @keyframes slideIn { from { opacity:0; transform:translateX(8px); } to { opacity:1; transform:translateX(0); } }
+
+    .sol-empty-state { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:var(--text-muted); padding:40px; }
+    .sol-empty-state svg { width:40px; height:40px; }
+    .sol-empty-state p { font-size:14px; text-align:center; }
+
+    .sol-detail-header { padding: 14px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .sol-detail-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .sol-detail-asunto { font-size: 16px; font-weight: 700; color: var(--text-primary); line-height: 1.3; }
+    .sol-detail-meta { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+    .sol-detail-unit { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 4px; }
+    .sol-detail-unit svg { width: 13px; height: 13px; }
+    .sol-detail-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+    .sol-estado-sel { padding: 6px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 12px; font-weight: 600; color: var(--text-primary); outline: none; cursor: pointer; transition: border-color var(--transition); }
+    .sol-estado-sel:focus { border-color: var(--purple); }
+
+    .sol-hilo { flex: 1; overflow-y: auto; min-height: 0; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+
+    .sol-msg { display: flex; gap: 10px; align-items: flex-start; }
+    .sol-msg.admin { flex-direction: row-reverse; }
+
+    .sol-msg-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0; }
+    .sol-msg-avatar.res { background: var(--info); }
+    .sol-msg-avatar.adm { background: var(--purple); }
+
+    .sol-msg-bubble { max-width: 75%; padding: 10px 14px; border-radius: 14px; font-size: 13px; line-height: 1.55; color: var(--text-primary); }
+    .sol-msg.res   .sol-msg-bubble { background: var(--surface2); border-radius: 4px 14px 14px 14px; }
+    .sol-msg.admin .sol-msg-bubble { background: var(--purple-dim); border-radius: 14px 4px 14px 14px; }
+    [data-theme="dark"] .sol-msg.admin .sol-msg-bubble { background: rgba(124,58,237,.2); }
+
+    .sol-msg-meta { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+    .sol-msg.admin .sol-msg-meta { text-align: right; }
+
+    .sol-event { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-muted); justify-content: center; }
+    .sol-event-line { flex: 1; height: 1px; background: var(--border); }
+    .sol-event-pill { padding: 3px 10px; border-radius: 20px; background: var(--surface2); border: 1px solid var(--border); font-size: 11px; font-weight: 500; color: var(--text-secondary); white-space: nowrap; }
+
+    .sol-msg-adj { margin-top: 8px; display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: rgba(0,0,0,.05); border-radius: var(--radius-sm); font-size: 12px; color: var(--text-secondary); cursor: pointer; transition: background var(--transition); }
+    .sol-msg-adj:hover { background: rgba(0,0,0,.09); }
+    .sol-msg-adj svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+    .sol-reply-area { border-top: 1px solid var(--border); padding: 12px 16px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
+    .sol-reply-input { width: 100%; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; color: var(--text-primary); outline: none; resize: none; transition: border-color var(--transition), box-shadow var(--transition); min-height: 70px; }
+    .sol-reply-input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(124,58,237,.12); }
+    .sol-reply-input::placeholder { color: var(--text-muted); }
+    .sol-reply-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .sol-reply-left  { display: flex; align-items: center; gap: 6px; }
+
+    .sol-anon-banner { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: var(--radius-sm); background: #FFFBEB; border: 1px solid #FDE68A; font-size: 12px; color: #92400E; margin-top: 8px; }
+    [data-theme="dark"] .sol-anon-banner { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.2); color: #FCD34D; }
+    .sol-anon-banner svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+    .pub-media-btn { width: 30px; height: 30px; border-radius: var(--radius-sm); background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-secondary); transition: all var(--transition); }
+    .pub-media-btn:hover { background: var(--purple-dim); color: var(--purple); border-color: var(--purple); }
+    .pub-media-btn svg { width: 15px; height: 15px; }
+    .pub-notif-lbl { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); cursor: pointer; user-select: none; }
+
+    .pg-select { padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; color: var(--text-primary); outline: none; cursor: pointer; transition: border-color var(--transition); }
+    .pg-select:focus { border-color: var(--purple); }
+
+    /* ── ÍTEMS CERRADOS ── */
+    .sol-item.cerrada { opacity: .55; }
+    .sol-item.cerrada .sol-item-unit,
+    .sol-item.cerrada .sol-item-preview { color: var(--text-muted); }
+    .sol-item.cerrada .sol-item-asunto { text-decoration: line-through; color: var(--text-muted); }
+    .sol-item.cerrada .sol-item-dot {
+      background: transparent; border: 1.5px solid var(--border);
+      position: relative;
+    }
+    .sol-item.cerrada .sol-item-dot::after {
+      content: '✓'; position: absolute; inset: -4px; display: flex;
+      align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 700; color: var(--text-muted);
+      border: none;
+    }
+
+    /* Separador entre activas y cerradas */
+    .sol-cerradas-sep {
+      display: flex; align-items: center; gap: 6px;
+      padding: 5px 14px; font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .5px;
+      color: var(--text-muted);
+      background: var(--surface2);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .sol-cerradas-sep svg { width: 11px; height: 11px; }
+
+    /* Animación flash-verde antes de mover */
+    @keyframes solCerrando {
+      0%   { background: var(--surface); }
+      35%  { background: rgba(16,185,129,.18); opacity: 1; }
+      100% { background: var(--surface); opacity: .4; }
+    }
+    .sol-item.cerrando { animation: solCerrando .4s ease forwards; pointer-events: none; }
+
+    @media (max-width: 900px) { .sol-layout { grid-template-columns: 260px 1fr; } }
+    @media (max-width: 767px) {
+      .sol-layout { grid-template-columns: 1fr; }
+      .sol-detail-panel { display: none; }
+      .sol-detail-panel.mobile-open { display: flex; position: fixed; inset: 0; z-index: 300; background: var(--surface); }
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-toggle" onclick="toggleSidebar()"><i data-lucide="chevron-right"></i></div>
+    <div class="sidebar-inner">
+      <div class="sidebar-logo"><div class="logo-mark">F</div><span class="logo-name">FASTEN</span></div>
+      <nav class="sidebar-nav">
+        <a href="index.html"     class="nav-item" data-label="index"><i data-lucide="layout-index"></i><span class="nav-label">index</span></a>
+        <a href="pagos.html"         class="nav-item" data-label="Pagos"><i data-lucide="credit-card"></i><span class="nav-label">Pagos</span><span class="nav-badge">3</span></a>
+        <a href="publicaciones.html" class="nav-item" data-label="Publicaciones"><i data-lucide="megaphone"></i><span class="nav-label">Publicaciones</span></a>
+        <a href="solicitudes.html"   class="nav-item active" data-label="Solicitudes"><i data-lucide="message-square-warning"></i><span class="nav-label">Solicitudes</span><span class="nav-badge">7</span></a>
+        <a href="reservas.html"      class="nav-item" data-label="Reservas"><i data-lucide="calendar-check"></i><span class="nav-label">Reservas</span></a>
+      </nav>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-footer">
+        <div class="conjunto-info">
+          <div class="conjunto-icon"><i data-lucide="building-2"></i></div>
+          <div class="conjunto-texts"><div class="conjunto-name">Los Pinos</div></div>
+        </div>
+        <div class="user-trigger" id="userTrigger" onclick="toggleUserMenu()">
+          <div class="user-avatar">GP</div>
+          <div class="user-texts"><div class="user-name">Gustavo Petro</div><div class="user-role">Administrador</div></div>
+          <i data-lucide="chevron-up" class="user-chevron"></i>
+          <div class="user-dropdown" id="userDropdown">
+            <div class="dropdown-user-info"><div class="dropdown-user-name">Gustavo Petro</div><div class="dropdown-user-email">gpetro@lospinos.co</div></div>
+            <a href="configuracion.html" class="dropdown-item"><i data-lucide="settings-2"></i>Configuración</a>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item danger"><i data-lucide="log-out"></i>Cerrar sesión</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <header class="mobile-header">
+    <div class="mobile-logo"><div class="logo-mark">F</div><span class="mobile-logo-name">FASTEN</span></div>
+    <div class="mobile-header-right">
+      <span class="mobile-conjunto-pill">Los Pinos</span>
+      <div class="mobile-user-btn" id="mobileUserBtn" onclick="toggleMobileMenu()">
+        GP
+        <div class="mobile-user-dropdown" id="mobileUserMenu">
+          <div class="dropdown-user-info"><div class="dropdown-user-name">Gustavo Petro</div><div class="dropdown-user-email">gpetro@lospinos.co</div></div>
+          <a href="configuracion.html" class="dropdown-item"><i data-lucide="settings-2"></i>Configuración</a>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-item danger"><i data-lucide="log-out"></i>Cerrar sesión</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="bottom-nav">
+    <a href="index.html"     class="bottom-nav-item"><i data-lucide="layout-index"></i><span class="bottom-nav-label">Inicio</span></a>
+    <a href="pagos.html"         class="bottom-nav-item"><i data-lucide="credit-card"></i><span class="bottom-nav-label">Pagos</span><span class="bottom-nav-badge">3</span></a>
+    <a href="publicaciones.html" class="bottom-nav-item"><i data-lucide="megaphone"></i><span class="bottom-nav-label">Noticias</span></a>
+    <a href="solicitudes.html"   class="bottom-nav-item active"><i data-lucide="message-square-warning"></i><span class="bottom-nav-label">Solicitudes</span><span class="bottom-nav-badge">7</span></a>
+    <a href="reservas.html"      class="bottom-nav-item"><i data-lucide="calendar-check"></i><span class="bottom-nav-label">Reservas</span></a>
+  </nav>
+
+  <div class="main-wrapper" id="mainWrapper">
+    <main class="main">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div>
+          <h1 class="page-title">Solicitudes y Quejas</h1>
+          <p class="page-subtitle">Gestiona las comunicaciones de los residentes</p>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <span id="badgePendientes" class="badge badge-warning" style="font-size:12px;padding:4px 12px;"></span>
+          <span id="badgeTotal"      class="badge badge-gray"    style="font-size:12px;padding:4px 12px;"></span>
+        </div>
+      </div>
+
+      <div class="sol-layout">
+
+        <!-- Lista -->
+        <div class="sol-list-panel">
+          <div class="sol-list-header">
+            <div class="sol-list-top">
+              <span class="sol-list-title">Bandeja</span>
+              <select class="pg-select" id="solFiltroEstado" onchange="aplicarFiltroLista()" style="font-size:11px;padding:4px 8px;">
+                <option value="">Todos</option>
+                <option value="recibida">Recibida</option>
+                <option value="gestion">En gestión</option>
+                <option value="info">Requiere info</option>
+                <option value="resuelta">Resuelta</option>
+                <option value="cerrada">Cerrada</option>
+              </select>
+            </div>
+            <div class="sol-search">
+              <i data-lucide="search"></i>
+              <input type="text" placeholder="Buscar..." id="solBuscar" oninput="aplicarFiltroLista()" />
+            </div>
+            <div class="sol-tabs">
+              <div class="sol-tab active" onclick="cambiarTab('todas',this)">Todas</div>
+              <div class="sol-tab" onclick="cambiarTab('solicitud',this)">Solicitudes</div>
+              <div class="sol-tab" onclick="cambiarTab('queja',this)">Quejas</div>
+            </div>
+          </div>
+          <div class="sol-list" id="solList"></div>
+        </div>
+
+        <!-- Detalle -->
+        <div class="sol-detail-panel" id="solDetail">
+          <div class="sol-empty-state" id="solEmptyState">
+            <i data-lucide="message-square"></i>
+            <p>Selecciona una solicitud<br>para ver el detalle</p>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script>
+  lucide.createIcons();
+
+  document.body.classList.add('sidebar-init');
+  const sidebar = document.getElementById('sidebar');
+  function toggleSidebar() { sidebar.classList.toggle('open'); localStorage.setItem('fasten-sidebar', sidebar.classList.contains('open')?'open':'closed'); }
+  if (localStorage.getItem('fasten-sidebar')==='open') sidebar.classList.add('open');
+  requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove('sidebar-init')));
+
+  const userTrigger=document.getElementById('userTrigger'), userDropdown=document.getElementById('userDropdown');
+  function toggleUserMenu() {
+    const o=userDropdown.classList.toggle('open'); userTrigger.classList.toggle('menu-open');
+    if(o){const r=userTrigger.getBoundingClientRect();userDropdown.style.bottom=(window.innerHeight-r.top+8)+'px';userDropdown.style.left=r.left+'px';userDropdown.style.width=Math.max(r.width,210)+'px';}
+  }
+  document.addEventListener('click', e => {
+    if(!userTrigger.contains(e.target)){userDropdown.classList.remove('open');userTrigger.classList.remove('menu-open');}
+    const mb=document.getElementById('mobileUserBtn');
+    if(mb&&!mb.contains(e.target))document.getElementById('mobileUserMenu').classList.remove('open');
+  });
+  function toggleMobileMenu(){document.getElementById('mobileUserMenu').classList.toggle('open');}
+  const savedTheme=localStorage.getItem('fasten-theme');
+  if(savedTheme)document.documentElement.setAttribute('data-theme',savedTheme);
+
+  const ESTADOS = {
+    recibida: {label:'Recibida',     cls:'sol-e-recibida', dot:'#2563EB'},
+    gestion:  {label:'En gestión',   cls:'sol-e-gestion',  dot:'#7C3AED'},
+    info:     {label:'Requiere info',cls:'sol-e-info',     dot:'#D97706'},
+    resuelta: {label:'Resuelta',     cls:'sol-e-resuelta', dot:'#059669'},
+    cerrada:  {label:'Cerrada',      cls:'sol-e-cerrada',  dot:'#A09CB5'},
+  };
+
+  let solicitudes = [
+    { id:1, tipo:'queja', anonimo:false, unidad:'Apt. 204', residente:'Andrés Jaramillo', asunto:'Ruido excesivo en las noches', estado:'gestion', leida:true, fecha:'2026-05-19',
+      hilo:[
+        {de:'res', texto:'Buenos días. Quiero reportar que el vecino del Apt. 206 genera ruido excesivo después de las 10pm casi todos los días. Ya le comenté personalmente y no ha cambiado nada.', hora:'May 19 · 9:14am', adj:null},
+        {de:'adm', texto:'Buenos días Andrés. Hemos recibido tu reporte y lo gestionaremos de inmediato. Vamos a hablar con el residente del Apt. 206 y te informaremos del resultado.', hora:'May 19 · 10:32am', adj:null},
+        {tipo:'evento', texto:'Estado cambiado a En gestión · May 19 · 10:32am'},
+      ]},
+    { id:2, tipo:'solicitud', anonimo:false, unidad:'Apt. 312', residente:'Samuel Cáceres', asunto:'Solicitud paz y salvo para venta', estado:'resuelta', leida:true, fecha:'2026-05-18',
+      hilo:[
+        {de:'res', texto:'Solicito el paz y salvo para la venta de mi vivienda. Adjunto copia de la promesa de compraventa.', hora:'May 18 · 2:05pm', adj:{nombre:'promesa_compraventa.pdf',icon:'file-text'}},
+        {de:'adm', texto:'Hola Samuel. Tu paz y salvo está listo. La unidad está al día en todos sus pagos.', hora:'May 18 · 4:45pm', adj:{nombre:'paz_y_salvo_apt312.pdf',icon:'file-check'}},
+        {tipo:'evento', texto:'Estado cambiado a Resuelta · May 18 · 4:45pm'},
+      ]},
+    { id:3, tipo:'queja', anonimo:true, unidad:'Apt. 108', residente:'Anónimo', asunto:'Mal olor en el área de basuras', estado:'recibida', leida:false, fecha:'2026-05-20',
+      hilo:[
+        {de:'res', texto:'El área de basuras lleva varios días con un olor muy fuerte. Por favor solicito revisión y limpieza urgente.', hora:'May 20 · 8:30am', adj:null},
+      ]},
+    { id:4, tipo:'solicitud', anonimo:false, unidad:'Casa 12', residente:'Jorge Ramírez', asunto:'Daño en la manguera del jardín comunal', estado:'info', leida:false, fecha:'2026-05-20',
+      hilo:[
+        {de:'res', texto:'La manguera del jardín comunal está rota desde hace una semana. Solicito su reparación.', hora:'May 20 · 11:00am', adj:null},
+        {de:'adm', texto:'Hola Jorge. Para gestionar esta solicitud necesitamos que nos envíes una foto del daño para poder dimensionar el trabajo de reparación.', hora:'May 20 · 12:15pm', adj:null},
+        {tipo:'evento', texto:'Estado cambiado a Requiere info · May 20 · 12:15pm'},
+      ]},
+    { id:5, tipo:'queja', anonimo:false, unidad:'Apt. 96', residente:'Julián Trujillo', asunto:'Ascensor fuera de servicio sin aviso', estado:'cerrada', leida:true, fecha:'2026-05-15',
+      hilo:[
+        {de:'res', texto:'El ascensor estuvo fuera de servicio todo el sábado sin previo aviso. Soy persona mayor y me afectó mucho subir 8 pisos.', hora:'May 15 · 3:20pm', adj:null},
+        {de:'adm', texto:'Julián, lamentamos lo ocurrido. El mantenimiento fue de emergencia. Tomaremos medidas para avisar con anticipación en el futuro.', hora:'May 15 · 5:00pm', adj:null},
+        {tipo:'evento', texto:'Estado cambiado a Resuelta · May 15 · 5:00pm'},
+        {tipo:'evento', texto:'Solicitud cerrada · May 16 · 9:00am'},
+      ]},
+    { id:6, tipo:'solicitud', anonimo:false, unidad:'Apt. 205', residente:'Lucía Fernández', asunto:'Instalación de punto de reciclaje', estado:'recibida', leida:false, fecha:'2026-05-20',
+      hilo:[
+        {de:'res', texto:'Propongo que el conjunto instale un punto de reciclaje organizado por materiales. Estaría dispuesta a liderar la iniciativa si la administración la apoya.', hora:'May 20 · 7:45am', adj:null},
+      ]},
+    { id:7, tipo:'queja', anonimo:false, unidad:'Apt. 106', residente:'Andrea Villa', asunto:'Filtración de agua desde el techo', estado:'gestion', leida:false, fecha:'2026-05-19',
+      hilo:[
+        {de:'res', texto:'Tengo una filtración de agua desde el techo de mi baño que está causando humedad. Adjunto fotos del daño.', hora:'May 19 · 6:30pm', adj:{nombre:'fotos_filtracion.jpg',icon:'image'}},
+        {de:'adm', texto:'Andrea, gracias por reportarlo. Hemos coordinado con mantenimiento para revisar mañana entre 9am y 11am. ¿Te parece bien ese horario?', hora:'May 19 · 8:00pm', adj:null},
+        {tipo:'evento', texto:'Estado cambiado a En gestión · May 19 · 8:00pm'},
+      ]},
+  ];
+
+  let tabActual = 'todas';
+  let solActivaId = null;
+
+  function renderLista(data) {
+    const list = document.getElementById('solList');
+    if (!data.length) { list.innerHTML='<div style="padding:30px;text-align:center;font-size:13px;color:var(--text-muted);">Sin resultados.</div>'; return; }
+
+    const itemHTML = s => {
+      const e = ESTADOS[s.estado];
+      const cerrada = s.estado === 'cerrada';
+      const lastMsg = s.hilo.filter(h=>h.de).slice(-1)[0];
+      const preview = lastMsg ? lastMsg.texto.replace(/<[^>]+>/g,'') : '';
+      return `<div class="sol-item${s.id===solActivaId?' active':''}${cerrada?' cerrada':''}" data-sol-id="${s.id}" onclick="abrirDetalle(${s.id})">
+        <div class="sol-item-dot${(s.leida||cerrada)?' read':''}"></div>
+        <div class="sol-item-body">
+          <div class="sol-item-top">
+            <span class="sol-item-unit">${s.anonimo?'🔒 Anónimo':s.unidad}</span>
+            <span class="sol-item-time">${s.fecha}</span>
+          </div>
+          <div class="sol-item-asunto">${s.asunto}</div>
+          <div class="sol-item-preview">${preview.substring(0,60)}${preview.length>60?'...':''}</div>
+          <div class="sol-item-badges">
+            <span class="sol-tipo-badge sol-tipo-${s.tipo}">${s.tipo==='queja'?'Queja':'Solicitud'}</span>
+            <span class="sol-estado ${e.cls}"><span class="sol-estado-dot" style="background:${e.dot};"></span>${e.label}</span>
+          </div>
+        </div>
+      </div>`;
+    };
+
+    const activas  = data.filter(s => s.estado !== 'cerrada');
+    const cerradas = data.filter(s => s.estado === 'cerrada');
+
+    let html = activas.map(itemHTML).join('');
+    if (cerradas.length) {
+      html += `<div class="sol-cerradas-sep"><i data-lucide="check-circle"></i>Cerradas (${cerradas.length})</div>`;
+      html += cerradas.map(itemHTML).join('');
+    }
+    list.innerHTML = html;
+    lucide.createIcons();
+  }
+
+  function aplicarFiltroLista() {
+    const buscar = document.getElementById('solBuscar').value.toLowerCase();
+    const estado = document.getElementById('solFiltroEstado').value;
+    let data = solicitudes;
+    if (tabActual!=='todas') data=data.filter(s=>s.tipo===tabActual);
+    if (estado) data=data.filter(s=>s.estado===estado);
+    if (buscar) data=data.filter(s=>s.asunto.toLowerCase().includes(buscar)||s.unidad.toLowerCase().includes(buscar)||(s.residente&&s.residente.toLowerCase().includes(buscar)));
+    renderLista(data);
+    actualizarBadges();
+  }
+
+  function cambiarTab(tab,el) {
+    tabActual=tab;
+    document.querySelectorAll('.sol-tab').forEach(t=>t.classList.remove('active'));
+    el.classList.add('active');
+    aplicarFiltroLista();
+  }
+
+  function actualizarBadges() {
+    const pendientes=solicitudes.filter(s=>['recibida','gestion','info'].includes(s.estado)).length;
+    document.getElementById('badgePendientes').textContent=pendientes+' pendientes';
+    document.getElementById('badgeTotal').textContent=solicitudes.length+' en total';
+  }
+
+  function abrirDetalle(id) {
+    solActivaId=id;
+    const s=solicitudes.find(x=>x.id===id);
+    s.leida=true;
+    aplicarFiltroLista();
+
+    const panel=document.getElementById('solDetail');
+    panel.classList.add('entering');
+    setTimeout(()=>panel.classList.remove('entering'),250);
+
+    const anonBanner=s.anonimo?`<div class="sol-anon-banner"><i data-lucide="eye-off"></i>Enviada de forma anónima. La unidad es visible solo para el administrador.</div>`:'';
+
+    const hiloHTML=s.hilo.map(h=>{
+      if(h.tipo==='evento') return `<div class="sol-event"><div class="sol-event-line"></div><span class="sol-event-pill">${h.texto}</span><div class="sol-event-line"></div></div>`;
+      const isAdm=h.de==='adm';
+      const adj=h.adj?`<div class="sol-msg-adj"><i data-lucide="${h.adj.icon}"></i>${h.adj.nombre}</div>`:'';
+      return `<div class="sol-msg ${isAdm?'admin':'res'}">
+        <div class="sol-msg-avatar ${isAdm?'adm':'res'}">${isAdm?'A':'R'}</div>
+        <div>
+          <div class="sol-msg-bubble">${h.texto}${adj}</div>
+          <div class="sol-msg-meta">${isAdm?'Administración':'Residente'} · ${h.hora}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    panel.innerHTML=`
+      <div class="sol-detail-header">
+        <div class="sol-detail-top">
+          <div style="flex:1;min-width:0;">
+            <div class="sol-detail-asunto">${s.asunto}</div>
+            <div class="sol-detail-meta">
+              ${!s.anonimo
+                ?`<span class="sol-detail-unit"><i data-lucide="home"></i>${s.unidad} · ${s.residente}</span>`
+                :`<span class="sol-detail-unit"><i data-lucide="eye-off"></i>Anónimo · ${s.unidad} (interno)</span>`}
+              <span class="sol-tipo-badge sol-tipo-${s.tipo}">${s.tipo==='queja'?'Queja':'Solicitud'}</span>
+              <span style="font-size:11px;color:var(--text-muted);">${s.fecha}</span>
+            </div>
+            ${anonBanner}
+          </div>
+          <div class="sol-detail-actions">
+            <select class="sol-estado-sel" onchange="cambiarEstado(${s.id},this.value)">
+              ${Object.entries(ESTADOS).map(([k,v])=>`<option value="${k}"${k===s.estado?' selected':''}>${v.label}</option>`).join('')}
+            </select>
+            <button class="btn btn-ghost btn-sm" style="color:var(--success);" onclick="cerrarSolicitud(${s.id})" title="Marcar como cerrada">
+              <i data-lucide="check-circle"></i>Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="sol-hilo" id="solHilo">${hiloHTML}</div>
+      <div class="sol-reply-area">
+        <textarea class="sol-reply-input" id="solReplyInput" placeholder="Escribe tu respuesta… (Enter para enviar, Shift+Enter para nueva línea)"></textarea>
+        <div class="sol-reply-footer">
+          <div class="sol-reply-left">
+            <button class="pub-media-btn" title="Adjuntar archivo"><i data-lucide="paperclip"></i></button>
+            <label class="pub-notif-lbl">
+              <button class="toggle on" id="replyNotif" onclick="this.classList.toggle('on');event.preventDefault()"></button>
+              Notificar
+            </label>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secondary btn-sm" onclick="enviarRespuesta(${s.id},'info')"><i data-lucide="help-circle"></i>Pedir info</button>
+            <button class="btn btn-primary btn-sm" onclick="enviarRespuesta(${s.id},'respuesta')"><i data-lucide="send"></i>Responder</button>
+          </div>
+        </div>
+      </div>`;
+
+    lucide.createIcons();
+    const hilo = document.getElementById('solHilo');
+    if (hilo) setTimeout(() => hilo.scrollTop = hilo.scrollHeight, 50);
+    const replyInput = document.getElementById('solReplyInput');
+    if (replyInput) {
+      replyInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarRespuesta(s.id, 'respuesta'); }
+      });
+      replyInput.focus();
+    }
+  }
+
+  function cambiarEstado(id, nuevoEstado) {
+    const s = solicitudes.find(x => x.id === id);
+    if (!s) return;
+    const e = ESTADOS[nuevoEstado];
+    s.estado = nuevoEstado;
+    const hora = new Date().toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'});
+    s.hilo.push({tipo:'evento', texto:`Estado cambiado a ${e.label} · ${hora}`});
+
+    if (nuevoEstado === 'cerrada') {
+      const itemEl = document.querySelector(`.sol-item[data-sol-id="${id}"]`);
+      if (itemEl) {
+        itemEl.classList.add('cerrando');
+        setTimeout(() => { abrirDetalle(id); aplicarFiltroLista(); }, 420);
+      } else {
+        abrirDetalle(id); aplicarFiltroLista();
+      }
+    } else {
+      abrirDetalle(id); aplicarFiltroLista();
+    }
+  }
+
+  function enviarRespuesta(id, tipo) {
+    const input = document.getElementById('solReplyInput');
+    const texto = input.value.trim();
+    if (!texto) return;
+    const s = solicitudes.find(x => x.id === id);
+    const hora = new Date().toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'});
+    s.hilo.push({de:'adm', texto, hora:'Ahora · '+hora, adj:null});
+    input.value = '';
+    if (tipo === 'info') cambiarEstado(id, 'info');
+    else { abrirDetalle(id); aplicarFiltroLista(); }
+  }
+
+  function cerrarSolicitud(id) { cambiarEstado(id,'cerrada'); }
+
+  // Init
+  aplicarFiltroLista();
+  abrirDetalle(solicitudes[0].id);
+</script>
+</body>
+</html>
