@@ -8,7 +8,7 @@
       <span class="logo-name">FASTEN</span>
     </div>
     <nav class="sidebar-nav">
-      <a href="dashboard.html"     class="nav-item" data-page="dashboard.html"     data-label="Inicio"><i data-lucide="house"></i><span class="nav-label">Inicio</span></a>
+      <a href="index.html"     class="nav-item" data-page="index.html"     data-label="Inicio"><i data-lucide="house"></i><span class="nav-label">Inicio</span></a>
       <a href="pagos.html"         class="nav-item" data-page="pagos.html"         data-label="Pagos"><i data-lucide="credit-card"></i><span class="nav-label">Pagos</span><span class="nav-badge">10</span></a>
       <a href="publicaciones.html" class="nav-item" data-page="publicaciones.html" data-label="Publicaciones"><i data-lucide="megaphone"></i><span class="nav-label">Publicaciones</span></a>
       <a href="solicitudes.html"   class="nav-item" data-page="solicitudes.html"   data-label="Solicitudes"><i data-lucide="message-square-warning"></i><span class="nav-label">Solicitudes</span><span class="nav-badge">7</span></a>
@@ -97,7 +97,7 @@
 
   var BOTTOM_NAV_HTML = `
 <nav class="bottom-nav">
-  <a href="dashboard.html"     class="bottom-nav-item" data-page="dashboard.html"><i data-lucide="home"></i><span class="bottom-nav-label">Inicio</span></a>
+  <a href="index.html"     class="bottom-nav-item" data-page="index.html"><i data-lucide="home"></i><span class="bottom-nav-label">Inicio</span></a>
   <a href="pagos.html"         class="bottom-nav-item" data-page="pagos.html"><i data-lucide="credit-card"></i><span class="bottom-nav-label">Pagos</span><span class="bottom-nav-badge">10</span></a>
   <a href="publicaciones.html" class="bottom-nav-item" data-page="publicaciones.html"><i data-lucide="megaphone"></i><span class="bottom-nav-label">Noticias</span></a>
   <a href="solicitudes.html"   class="bottom-nav-item" data-page="solicitudes.html"><i data-lucide="message-square-warning"></i><span class="bottom-nav-label">Solicitudes</span><span class="bottom-nav-badge">7</span></a>
@@ -113,7 +113,7 @@
   container.replaceWith(wrapper);
 
   // Mark active nav item based on current page filename
-  var page = (window.location.pathname.split('/').pop() || 'dashboard.html').toLowerCase();
+  var page = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
   document.querySelectorAll('.nav-item[data-page]').forEach(function (el) {
     if (el.dataset.page === page) el.classList.add('active');
   });
