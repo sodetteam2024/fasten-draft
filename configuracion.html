@@ -5,11 +5,633 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FASTEN — Configuración</title>
   <link rel="stylesheet" href="Fasten.css" />
+  <link rel="stylesheet" href="sidebar.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .cfg-shell {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      min-height: calc(100vh - 160px);
+    }
+    .cfg-tabs {
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 12px 8px; gap: 2px;
+      background: var(--surface2);
+    }
+    .cfg-tab {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: var(--radius-sm);
+      cursor: pointer; font-size: 13px; font-weight: 500;
+      color: var(--text-secondary); transition: all var(--transition);
+      position: relative; border: none; background: transparent;
+      text-align: left; width: 100%; font-family: var(--font);
+    }
+    .cfg-tab svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--text-muted); transition: color var(--transition); }
+    .cfg-tab:hover { background: var(--purple-dim); color: var(--purple); }
+    .cfg-tab:hover svg { color: var(--purple); }
+    .cfg-tab.active { background: var(--purple-dim); color: var(--purple); font-weight: 600; }
+    .cfg-tab.active svg { color: var(--purple); }
+    .cfg-tab.active::before { content: ''; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px; background: var(--purple); border-radius: 0 3px 3px 0; }
+    .cfg-tab-sep { height: 1px; background: var(--border); margin: 6px 4px; }
+    .cfg-panel { display: flex; flex-direction: column; min-height: 0; }
+    .cfg-section { display: none; flex-direction: column; flex: 1; }
+    .cfg-section.active { display: flex; }
+    .cfg-section-header { padding: 24px 28px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .cfg-section-title { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+    .cfg-section-desc { font-size: 13px; color: var(--text-muted); }
+    .cfg-section-body { padding: 24px 28px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; }
+    .cfg-section-footer { padding: 14px 28px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0; background: var(--surface); }
+    .cfg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+    .cfg-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .cfg-block-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .cfg-block-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .cfg-dropzone { border: 2px dashed var(--border); border-radius: var(--radius); padding: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: all var(--transition); text-align: center; background: var(--surface2); }
+    .cfg-dropzone:hover { border-color: var(--purple); background: var(--purple-dim); }
+    .cfg-dropzone svg { width: 28px; height: 28px; color: var(--text-muted); }
+    .cfg-dropzone:hover svg { color: var(--purple); }
+    .cfg-dropzone-label { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+    .cfg-dropzone-sub { font-size: 11px; color: var(--text-muted); }
+    .cfg-dropzone.has-file { border-color: var(--success); background: rgba(16,185,129,.06); }
+    .cfg-dropzone.has-file svg { color: var(--success); }
+    .cfg-gateway { border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--surface2); transition: border-color var(--transition); }
+    .cfg-gateway:hover { border-color: var(--purple); }
+    .cfg-gateway-left { display: flex; align-items: center; gap: 14px; }
+    .cfg-gateway-logo { width: 44px; height: 44px; border-radius: 10px; background: #00b8d4; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #fff; flex-shrink: 0; }
+    .cfg-gateway-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .cfg-gateway-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .cfg-status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .cfg-status-pill.disconnected { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+    .cfg-status-pill.connected { background: rgba(16,185,129,.12); color: var(--success); border: 1px solid rgba(16,185,129,.2); }
+    .cfg-status-dot { width: 6px; height: 6px; border-radius: 50%; }
+    .cfg-mora-wrap { position: relative; }
+    .cfg-mora-wrap .form-control { padding-right: 90px; }
+    .cfg-mora-unit { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 11px; font-weight: 600; color: var(--text-muted); pointer-events: none; }
+    .cfg-mora-hint { display: flex; align-items: flex-start; gap: 7px; padding: 10px 12px; border-radius: var(--radius-sm); background: #EFF6FF; border: 1px solid #BFDBFE; font-size: 12px; color: #1D4ED8; margin-top: 8px; }
+    [data-theme="dark"] .cfg-mora-hint { background: rgba(59,130,246,.1); border-color: rgba(59,130,246,.2); color: #60A5FA; }
+    .cfg-mora-hint svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px; }
+    .cfg-toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
+    .cfg-toggle-row:last-child { border-bottom: none; }
+    .cfg-toggle-label { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+    .cfg-toggle-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .cfg-user-table { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .cfg-user-row { display: grid; grid-template-columns: 1fr 1.5fr 100px 80px; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; transition: background var(--transition); }
+    .cfg-user-row:last-child { border-bottom: none; }
+    .cfg-user-row:not(.header):hover { background: var(--surface2); }
+    .cfg-user-row.header { background: var(--surface2); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); }
+    .cfg-user-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--purple); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+    .cfg-user-name-wrap { display: flex; align-items: center; gap: 8px; }
+    .cfg-user-name  { font-weight: 600; color: var(--text-primary); }
+    .cfg-user-email { font-size: 11px; color: var(--text-muted); }
+    .cfg-role-pill { display: inline-flex; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; background: var(--purple-dim); color: var(--purple); }
+    .cfg-role-pill.portero { background: rgba(16,185,129,.1); color: var(--success); }
+    .cfg-invite-row { display: flex; gap: 10px; align-items: flex-end; margin-top: 12px; }
+    .cfg-invite-row .form-group { margin-bottom: 0; flex: 1; }
+    .cfg-notif-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .cfg-notif-table thead th { padding: 10px 14px; text-align: center; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); background: var(--surface2); border-bottom: 1px solid var(--border); }
+    .cfg-notif-table thead th:first-child { text-align: left; }
+    .cfg-notif-table tbody tr { border-bottom: 1px solid var(--border); transition: background var(--transition); }
+    .cfg-notif-table tbody tr:last-child { border-bottom: none; }
+    .cfg-notif-table tbody tr:hover { background: var(--surface2); }
+    .cfg-notif-table tbody td { padding: 12px 14px; vertical-align: middle; }
+    .cfg-notif-table tbody td:not(:first-child) { text-align: center; }
+    .cfg-notif-event { font-weight: 500; color: var(--text-primary); }
+    .cfg-notif-event-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .cfg-checkbox { width: 18px; height: 18px; accent-color: var(--purple); cursor: pointer; }
+    .cfg-theme-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .cfg-theme-card { border: 2px solid var(--border); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: all var(--transition); display: flex; flex-direction: column; gap: 12px; }
+    .cfg-theme-card:hover { border-color: var(--purple); }
+    .cfg-theme-card.selected { border-color: var(--purple); background: var(--purple-dim); }
+    .cfg-theme-preview { height: 80px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); display: flex; }
+    .cfg-theme-preview-sidebar { width: 24px; flex-shrink: 0; }
+    .cfg-theme-preview-main { flex: 1; display: flex; flex-direction: column; gap: 4px; padding: 6px; }
+    .cfg-theme-preview-bar { height: 6px; border-radius: 3px; }
+    .cfg-theme-preview-bar.w-full { width: 100%; }
+    .cfg-theme-preview-bar.w-60  { width: 60%; }
+    .cfg-theme-preview-bar.w-40  { width: 40%; }
+    .cfg-theme-light .cfg-theme-preview-sidebar { background: #1e1535; }
+    .cfg-theme-light .cfg-theme-preview-main    { background: #f8f7fc; }
+    .cfg-theme-light .cfg-theme-preview-bar     { background: #e2e0ec; }
+    .cfg-theme-dark .cfg-theme-preview-sidebar  { background: #13111C; }
+    .cfg-theme-dark .cfg-theme-preview-main     { background: #0F0D1A; }
+    .cfg-theme-dark .cfg-theme-preview-bar      { background: #2a2640; }
+    .cfg-theme-label { font-size: 13px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 6px; }
+    .cfg-theme-check { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); margin-left: auto; display: flex; align-items: center; justify-content: center; transition: all var(--transition); }
+    .cfg-theme-card.selected .cfg-theme-check { background: var(--purple); border-color: var(--purple); }
+    .cfg-theme-card.selected .cfg-theme-check::after { content: ''; width: 5px; height: 5px; border-radius: 50%; background: #fff; }
+    .cfg-phase2-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; background: var(--surface2); position: relative; overflow: hidden; opacity: .65; pointer-events: none; }
+    .cfg-phase2-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; background: var(--purple-dim); color: var(--purple); border: 1px solid rgba(124,58,237,.2); margin-bottom: 12px; }
+    .cfg-phase2-badge svg { width: 11px; height: 11px; }
+    .cfg-phase2-colors { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    .cfg-phase2-color { width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(255,255,255,.15); }
+    .cfg-plan-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; background: var(--surface2); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .cfg-plan-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; background: var(--purple-dim); color: var(--purple); margin-bottom: 6px; }
+    .cfg-plan-badge svg { width: 11px; height: 11px; }
+    .cfg-plan-name  { font-size: 20px; font-weight: 800; color: var(--text-primary); }
+    .cfg-plan-renew { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .cfg-facturas { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .cfg-factura-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; transition: background var(--transition); }
+    .cfg-factura-row:last-child { border-bottom: none; }
+    .cfg-factura-row:hover { background: var(--surface2); }
+    .cfg-factura-period { font-weight: 500; color: var(--text-primary); }
+    .cfg-factura-amount { font-size: 12px; color: var(--text-secondary); }
+    .cfg-factura-dl { width: 28px; height: 28px; border-radius: 6px; background: transparent; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-muted); transition: all var(--transition); }
+    .cfg-factura-dl:hover { background: var(--purple-dim); color: var(--purple); border-color: var(--purple); }
+    .cfg-factura-dl svg { width: 13px; height: 13px; }
+    .cfg-support-note { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--surface2); border: 1px solid var(--border); font-size: 12px; color: var(--text-secondary); }
+    .cfg-support-note svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px; color: var(--text-muted); }
+    @media (max-width: 900px) {
+      .cfg-shell { grid-template-columns: 1fr; }
+      .cfg-tabs { flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--border); padding: 8px; }
+      .cfg-tab.active::before { display: none; }
+    }
+    @media (max-width: 767px) {
+      .cfg-section-body { padding: 16px; }
+      .cfg-section-header { padding: 16px 16px 12px; }
+      .cfg-section-footer { padding: 12px 16px; }
+      .cfg-grid-2 { grid-template-columns: 1fr; }
+      .cfg-user-row { grid-template-columns: 1fr 80px; }
+      .cfg-theme-cards { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
-  <div class="app-shell" style="padding: 40px; max-width: 720px; margin: 0 auto;">
-    <h1>Configuración</h1>
-    <p>Esta página está en construcción. Vuelve a la <a href="index.html">página principal</a> para seguir navegando.</p>
+<div class="app-shell">
+  <div id="sidebar-container"></div>
+  <script src="sidebar.js"></script>
+
+  <div class="main-wrapper" id="mainWrapper">
+    <main class="main">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div>
+          <h1 class="page-title">Configuración</h1>
+          <p class="page-subtitle">Personaliza los parámetros del conjunto Los Pinos</p>
+        </div>
+      </div>
+
+      <div class="cfg-shell">
+
+        <!-- TABS -->
+        <div class="cfg-tabs">
+          <button class="cfg-tab active" onclick="mostrarSeccion('conjunto',this)"><i data-lucide="building-2"></i>Información del conjunto</button>
+          <button class="cfg-tab" onclick="mostrarSeccion('pagos',this)"><i data-lucide="credit-card"></i>Pagos</button>
+          <button class="cfg-tab" onclick="mostrarSeccion('reservas',this)"><i data-lucide="calendar-check"></i>Reservas</button>
+          <button class="cfg-tab" onclick="mostrarSeccion('visitantes',this)"><i data-lucide="door-open"></i>Visitantes</button>
+          <div class="cfg-tab-sep"></div>
+          <button class="cfg-tab" onclick="mostrarSeccion('usuarios',this)"><i data-lucide="users"></i>Usuarios y accesos</button>
+          <button class="cfg-tab" onclick="mostrarSeccion('notificaciones',this)"><i data-lucide="bell"></i>Notificaciones</button>
+          <div class="cfg-tab-sep"></div>
+          <button class="cfg-tab" onclick="mostrarSeccion('apariencia',this)"><i data-lucide="palette"></i>Apariencia</button>
+          <button class="cfg-tab" onclick="mostrarSeccion('plan',this)"><i data-lucide="sparkles"></i>Plan y facturación</button>
+        </div>
+
+        <!-- PANEL -->
+        <div class="cfg-panel">
+
+          <!-- 1. CONJUNTO -->
+          <div class="cfg-section active" id="sec-conjunto">
+            <div class="cfg-section-header">
+              <div class="cfg-section-title">Información del conjunto</div>
+              <div class="cfg-section-desc">Datos básicos del conjunto residencial. Esta información aparece en facturas y documentos oficiales.</div>
+            </div>
+            <div class="cfg-section-body">
+              <div>
+                <div class="cfg-block-title">Datos generales</div>
+                <div class="cfg-grid">
+                  <div class="form-group"><label class="form-label">Nombre del conjunto</label><input class="form-control" value="Los Pinos" /></div>
+                  <div class="form-group"><label class="form-label">NIT</label><input class="form-control" placeholder="900.123.456-7" /></div>
+                  <div class="form-group"><label class="form-label">Dirección</label><input class="form-control" placeholder="Cra. 10 # 45-20" /></div>
+                  <div class="form-group"><label class="form-label">Ciudad</label><input class="form-control" placeholder="Bucaramanga" /></div>
+                </div>
+              </div>
+              <div>
+                <div class="cfg-block-title">Archivos</div>
+                <div class="cfg-grid-2">
+                  <div>
+                    <div class="form-label" style="margin-bottom:8px;">Logo del conjunto</div>
+                    <div class="cfg-dropzone" onclick="this.querySelector('input').click()">
+                      <input type="file" accept="image/*" style="display:none" onchange="marcarDropzone(this)" />
+                      <i data-lucide="image-plus"></i>
+                      <div class="cfg-dropzone-label">Subir logo</div>
+                      <div class="cfg-dropzone-sub">PNG o SVG · máx. 2MB</div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="form-label" style="margin-bottom:8px;">Reglamento de Propiedad Horizontal</div>
+                    <div class="cfg-dropzone" onclick="this.querySelector('input').click()">
+                      <input type="file" accept=".pdf" style="display:none" onchange="marcarDropzone(this)" />
+                      <i data-lucide="file-text"></i>
+                      <div class="cfg-dropzone-label">Subir reglamento</div>
+                      <div class="cfg-dropzone-sub">PDF · máx. 10MB</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="cfg-section-footer">
+              <button class="btn btn-secondary btn-sm">Cancelar</button>
+              <button class="btn btn-primary btn-sm"><i data-lucide="save"></i>Guardar cambios</button>
+            </div>
+          </div>
+
+          <!-- 2. PAGOS -->
+          <div class="cfg-section" id="sec-pagos">
+            <div class="cfg-section-header">
+              <div class="cfg-section-title">Pagos</div>
+              <div class="cfg-section-desc">Parámetros financieros del conjunto. Afectan el cálculo de mora y los ciclos de cobro.</div>
+            </div>
+            <div class="cfg-section-body">
+              <div>
+                <div class="cfg-block-title">Parámetros de cobro</div>
+                <div class="cfg-grid">
+                  <div class="form-group"><label class="form-label">Cuota de administración</label><input class="form-control" type="number" value="150000" /></div>
+                  <div class="form-group"><label class="form-label">Día de corte mensual</label><select class="form-control" id="diaCorteSel"></select></div>
+                  <div class="form-group"><label class="form-label">Días de gracia antes de mora</label><input class="form-control" type="number" value="5" min="0" max="30" /></div>
+                </div>
+              </div>
+              <div>
+                <div class="cfg-block-title">Tasa de mora</div>
+                <div style="max-width:340px;">
+                  <div class="form-group">
+                    <label class="form-label">Tasa mensual aplicada</label>
+                    <div class="cfg-mora-wrap">
+                      <input class="form-control" type="number" value="1.996" step="0.001" id="tasaMora" />
+                      <span class="cfg-mora-unit">% mensual</span>
+                    </div>
+                  </div>
+                  <div class="cfg-mora-hint">
+                    <i data-lucide="info"></i>
+                    La tasa por defecto es 1.996% mensual según la Ley 675 de 2001 (1.5× el interés bancario corriente). Modifícala solo si la asamblea aprobó una tasa diferente.
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="cfg-block-title">Pasarela de pagos</div>
+                <div class="cfg-gateway">
+                  <div class="cfg-gateway-left">
+                    <div class="cfg-gateway-logo">W</div>
+                    <div>
+                      <div class="cfg-gateway-name">Wompi</div>
+                      <div class="cfg-gateway-desc">Recibe pagos de los residentes directamente en tu cuenta bancaria</div>
+                    </div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <span class="cfg-status-pill disconnected" id="wompiStatus">
+                      <span class="cfg-status-dot" style="background:var(--text-muted);"></span>Desconectado
+                    </span>
+                    <button class="btn btn-primary btn-sm" onclick="conectarWompi(this)"><i data-lucide="plug"></i>Conectar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="cfg-section-footer">
+              <button class="btn btn-secondary btn-sm">Cancelar</button>
+              <button class="btn btn-primary btn-sm"><i data-lucide="save"></i>Guardar cambios</button>
+            </div>
+          </div>
+
+          <!-- 3. RESERVAS -->
+          <div class="cfg-section" id="sec-reservas">
+            <div class="cfg-section-header">
+              <div class="cfg-section-title">Reservas</div>
+              <div class="cfg-section-desc">Políticas globales para el módulo de reservas. La configuración de cada área común está en el módulo de Reservas.</div>
+            </div>
+            <div class="cfg-section-body">
+              <div>
+                <div class="cfg-block-title">Límites</div>
+                <div style="max-width:280px;">
+                  <div class="form-group"><label class="form-label">Máximo de reservas activas por unidad</label><input class="form-control" type="number" value="2" min="1" max="10" /></div>
+                </div>
+              </div>
+              <div>
+                <div class="cfg-block-title">Políticas</div>
+                <div>
+                  <div class="cfg-toggle-row">
+                    <div><div class="cfg-toggle-label">Bloquear reservas si la unidad tiene mora</div><div class="cfg-toggle-sub">Las unidades con pagos vencidos no podrán solicitar reservas</div></div>
+                    <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+                  </div>
+                  <div class="cfg-toggle-row">
+                    <div><div class="cfg-toggle-label">Aprobación automática por defecto</div><div class="cfg-toggle-sub">Las reservas se aprueban automáticamente si hay disponibilidad</div></div>
+                    <button class="toggle" onclick="this.classList.toggle('on')"></button>
+                  </div>
+                  <div class="cfg-toggle-row">
+                    <div><div class="cfg-toggle-label">Notificar al residente al aprobar</div><div class="cfg-toggle-sub">Envía notificación push y correo automáticamente</div></div>
+                    <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="cfg-section-footer">
+              <button class="btn btn-secondary btn-sm">Cancelar</button>
+              <button class="btn btn-primary btn-sm"><i data-lucide="save"></i>Guardar cambios</button>
+            </div>
+          </div>
+
+          <!-- 4. VISITANTES -->
+          <div class="cfg-section" id="sec-visitantes">
+            <div class="cfg-section-header">
+              <div class="cfg-section-title">Visitantes</div>
+              <div class="cfg-section-desc">Configura cómo el portero valida el acceso y los parámetros de los pases temporales.</div>
+            </div>
+            <div class="cfg-section-body">
+              <div>
+                <div class="cfg-block-title">Modalidad de acceso</div>
+                <div style="max-width:320px;">
+                  <div class="form-group">
+                    <label class="form-label">Método de validación en portería</label>
+                    <select class="form-control">
+                      <option>Código numérico (4 dígitos)</option>
+                      <option>Código QR escaneable</option>
+                      <option>Ambos disponibles</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="cfg-block-title">Pases temporales</div>
+                <div class="cfg-grid-2" style="max-width:480px;">
+                  <div class="form-group"><label class="form-label">Duración máxima (horas)</label><input class="form-control" type="number" value="72" min="1" /></div>
+                  <div class="form-group"><label class="form-label">Máximo de usos por pase</label><input class="form-control" type="number" value="1" min="1" /></div>
+                </div>
+                <div class="cfg-toggle-row" style="border-top:1px solid var(--border);margin-top:4px;">
+                  <div><div class="cfg-toggle-label">El residente puede crear pases temporales</div><div class="cfg-toggle-sub">Si está desactivado, solo el admin puede generarlos</div></div>
+                  <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+                </div>
+              </div>
+            </div>
+            <div class="cfg-section-footer">
+              <button class="btn btn-secondary btn-sm">Cancelar</button>
+              <button class="btn btn-primary btn-sm"><i data-lucide="save"></i>Guardar cambios</button>
+            </div>
+          </div>
+
+          <!-- 5. USUARIOS -->
+          <div class="cfg-section" id="sec-usuarios">
+            <div class="cfg-section-header">
+              <div class="cfg-section-title">Usuarios y accesos</div>
+              <div class="cfg-section-desc">Gestiona quién tiene acceso al panel de administración y a la app de portería.</div>
+            </div>
+            <div class="cfg-section-body">
+              <div>
+                <div class="cfg-block-title">Administradores</div>
+                <div class="cfg-user-table">
+                  <div class="cfg-user-row header"><span>Nombre</span><span>Correo</span><span>Rol</span><span></span></div>
+                  <div class="cfg-user-row">
+                    <div class="cfg-user-name-wrap"><div class="cfg-user-avatar">GP</div><div><div class="cfg-user-name">Gustavo Petro</div><div class="cfg-user-email">gpetro@lospinos.co</div></div></div>
+                    <span style="font-size:12px;color:var(--text-secondary);">gpetro@lospinos.co</span>
+                    <span class="cfg-role-pill">Admin principal</span>
+                    <span style="font-size:11px;color:var(--text-muted);">Tú</span>
+                  </div>
+                  <div class="cfg-user-row">
+                    <div class="cfg-user-name-wrap"><div class="cfg-user-avatar" style="background:#2563EB;">ML</div><div><div class="cfg-user-name">María López</div><div class="cfg-user-email">mlopez@lospinos.co</div></div></div>
+                    <span style="font-size:12px;color:var(--text-secondary);">mlopez@lospinos.co</span>
+                    <span class="cfg-role-pill">Administrador</span>
+                    <button class="btn btn-ghost btn-icon btn-sm" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
+                  </div>
+                </div>
+                <div class="cfg-invite-row">
+                  <div class="form-group"><label class="form-label">Correo</label><input class="form-control" placeholder="correo@ejemplo.com" /></div>
+                  <div class="form-group"><label class="form-label">Rol</label><select class="form-control" style="min-width:130px;"><option>Administrador</option><option>Solo lectura</option></select></div>
+                  <button class="btn btn-secondary btn-sm" style="white-space:nowrap;margin-bottom:0;"><i data-lucide="mail"></i>Enviar invitación</button>
+                </div>
+              </div>
+              <div>
+                <div class="cfg-block-title">Porteros / Vigilantes</div>
+                <div class="cfg-user-table">
+                  <div class="cfg-user-row header"><span>Nombre</span><span>Usuario</span><span>Rol</span><span></span></div>
+                  <div class="cfg-user-row">
+                    <div class="cfg-user-name-wrap"><div class="cfg-user-avatar" style="background:#059669;">CR</div><div><div class="cfg-user-name">Carlos Ruiz</div><div class="cfg-user-email">Turno: 6am – 2pm</div></div></div>
+                    <span style="font-size:12px;color:var(--text-secondary);">portero1</span>
+                    <span class="cfg-role-pill portero">Portero</span>
+                    <button class="btn btn-ghost btn-icon btn-sm" style="color:var(--danger);"><i data-lucide="trash-2"></i></button>
+                  </div>
+                </div>
+                <div class="cfg-invite-row">
+                  <div class="form-group"><label class="form-label">Nombre</label><input class="form-control" placeholder="Nombre completo" /></div>
+                  <div class="form-group"><label class="form-label">Usuario</label><input class="form-control" placeholder="portero2" /></div>
+                  <div class="form-group"><label class="form-label">Contraseña</label><input class="form-control" type="password" placeholder="••••••••" /></div>
+                  <button class="btn btn-secondary btn-sm" style="white-space:nowrap;margin-bottom:0;"><i data-lucide="user-plus"></i>Crear acceso</button>
+                </div>
+              </div>
+            </div>
+            <div class="cfg-section-footer">
+              <span style="font-size:12px;color:var(--text-muted);align-self:center;">Los cambios se aplican de inmediato</span>
+            </div>
+          </div>
+
+          <!-- 6. NOTIFICACIONES -->
+          <div class="cfg-section" id="sec-notificaciones">
+            <div class="cfg-section-header">
+              <div class="cfg-section-title">Notificaciones</div>
+              <div class="cfg-section-desc">Define qué eventos generan notificación, por qué canal y a quién le llegan.</div>
+            </div>
+            <div class="cfg-section-body">
+              <div style="overflow-x:auto;">
+                <table class="cfg-notif-table">
+                  <thead>
+                    <tr>
+                      <th style="min-width:200px;">Evento</th>
+                      <th>Push<br><span style="font-weight:400;text-transform:none;font-size:10px;">Admin</span></th>
+                      <th>Email<br><span style="font-weight:400;text-transform:none;font-size:10px;">Admin</span></th>
+                      <th>Push<br><span style="font-weight:400;text-transform:none;font-size:10px;">Residente</span></th>
+                      <th>Email<br><span style="font-weight:400;text-transform:none;font-size:10px;">Residente</span></th>
+                    </tr>
+                  </thead>
+                  <tbody id="notifMatriz"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="cfg-section-footer">
+              <button class="btn btn-secondary btn-sm">Cancelar</button>
+              <button class="btn btn-primary btn-sm"><i data-lucide="save"></i>Guardar cambios</button>
+            </div>
+          </div>
+
+          <!-- 7. APARIENCIA -->
+          <div class="cfg-section" id="sec-apariencia">
+            <div class="cfg-section-header">
+              <div class="cfg-section-title">Apariencia</div>
+              <div class="cfg-section-desc">Personaliza la apariencia visual del panel de administración.</div>
+            </div>
+            <div class="cfg-section-body">
+              <div>
+                <div class="cfg-block-title">Tema</div>
+                <div class="cfg-theme-cards">
+                  <div class="cfg-theme-card cfg-theme-light selected" id="themeLight" onclick="seleccionarTema('light')">
+                    <div class="cfg-theme-preview">
+                      <div class="cfg-theme-preview-sidebar"></div>
+                      <div class="cfg-theme-preview-main">
+                        <div class="cfg-theme-preview-bar w-60" style="margin-bottom:2px;"></div>
+                        <div class="cfg-theme-preview-bar w-full" style="height:4px;margin-bottom:2px;"></div>
+                        <div class="cfg-theme-preview-bar w-40" style="height:4px;"></div>
+                      </div>
+                    </div>
+                    <div class="cfg-theme-label"><i data-lucide="sun"></i>Tema claro<span class="cfg-theme-check"></span></div>
+                  </div>
+                  <div class="cfg-theme-card cfg-theme-dark" id="themeDark" onclick="seleccionarTema('dark')">
+                    <div class="cfg-theme-preview">
+                      <div class="cfg-theme-preview-sidebar"></div>
+                      <div class="cfg-theme-preview-main">
+                        <div class="cfg-theme-preview-bar w-60" style="margin-bottom:2px;"></div>
+                        <div class="cfg-theme-preview-bar w-full" style="height:4px;margin-bottom:2px;"></div>
+                        <div class="cfg-theme-preview-bar w-40" style="height:4px;"></div>
+                      </div>
+                    </div>
+                    <div class="cfg-theme-label"><i data-lucide="moon"></i>Tema oscuro<span class="cfg-theme-check"></span></div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="cfg-block-title">Personalización de marca</div>
+                <div class="cfg-phase2-card">
+                  <div class="cfg-phase2-badge"><i data-lucide="lock"></i>Fase 2 — Próximamente</div>
+                  <div style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">White-label</div>
+                  <div style="font-size:13px;color:var(--text-muted);">Personaliza colores, logo y nombre de la plataforma para que coincidan con la identidad visual de tu conjunto.</div>
+                  <div class="cfg-phase2-colors">
+                    <div class="cfg-phase2-color" style="background:#7C3AED;"></div>
+                    <div class="cfg-phase2-color" style="background:#2563EB;"></div>
+                    <div class="cfg-phase2-color" style="background:#059669;"></div>
+                    <div class="cfg-phase2-color" style="background:#D97706;"></div>
+                    <div class="cfg-phase2-color" style="background:#DC2626;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="cfg-section-footer">
+              <button class="btn btn-secondary btn-sm" onclick="seleccionarTema(localStorage.getItem('fasten-theme')||'light')">Revertir</button>
+              <button class="btn btn-primary btn-sm" onclick="guardarTema()"><i data-lucide="save"></i>Aplicar tema</button>
+            </div>
+          </div>
+
+          <!-- 8. PLAN -->
+          <div class="cfg-section" id="sec-plan">
+            <div class="cfg-section-header">
+              <div class="cfg-section-title">Plan y facturación</div>
+              <div class="cfg-section-desc">Información sobre tu suscripción activa e historial de facturas.</div>
+            </div>
+            <div class="cfg-section-body">
+              <div>
+                <div class="cfg-block-title">Plan activo</div>
+                <div class="cfg-plan-card">
+                  <div>
+                    <div class="cfg-plan-badge"><i data-lucide="sparkles"></i>Activo</div>
+                    <div class="cfg-plan-name">Plan Pro</div>
+                    <div class="cfg-plan-renew">50 unidades · Renueva el 1 de junio de 2026</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div style="font-size:22px;font-weight:800;color:var(--text-primary);">$120.000<span style="font-size:13px;font-weight:400;color:var(--text-muted);">/mes</span></div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="cfg-block-title">Historial de facturas</div>
+                <div class="cfg-facturas">
+                  <div class="cfg-factura-row"><div><div class="cfg-factura-period">Mayo 2026</div><div class="cfg-factura-amount">$120.000 · Pagada</div></div><button class="cfg-factura-dl"><i data-lucide="download"></i></button></div>
+                  <div class="cfg-factura-row"><div><div class="cfg-factura-period">Abril 2026</div><div class="cfg-factura-amount">$120.000 · Pagada</div></div><button class="cfg-factura-dl"><i data-lucide="download"></i></button></div>
+                  <div class="cfg-factura-row"><div><div class="cfg-factura-period">Marzo 2026</div><div class="cfg-factura-amount">$120.000 · Pagada</div></div><button class="cfg-factura-dl"><i data-lucide="download"></i></button></div>
+                </div>
+              </div>
+              <div class="cfg-support-note">
+                <i data-lucide="info"></i>
+                <span>Para cambios de plan, cancelaciones o problemas de facturación, contacta al equipo de soporte SODET. Esta sección es de solo lectura en la fase actual.</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </main>
   </div>
+</div>
+
+<script>
+  lucide.createIcons();
+  const savedTheme = localStorage.getItem('fasten-theme');
+  if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+
+  function mostrarSeccion(id, btn) {
+    document.querySelectorAll('.cfg-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.cfg-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('sec-' + id).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  // Días de corte
+  const sel = document.getElementById('diaCorteSel');
+  for (let i = 1; i <= 30; i++) {
+    const o = document.createElement('option');
+    o.value = i; o.textContent = 'Día ' + i;
+    if (i === 15) o.selected = true;
+    sel.appendChild(o);
+  }
+
+  // Dropzone
+  function marcarDropzone(input) {
+    const dz = input.closest('.cfg-dropzone');
+    if (input.files.length) {
+      dz.classList.add('has-file');
+      dz.querySelector('.cfg-dropzone-label').textContent = input.files[0].name;
+      dz.querySelector('.cfg-dropzone-sub').textContent = (input.files[0].size / 1024).toFixed(0) + ' KB';
+      dz.querySelector('i').setAttribute('data-lucide', 'check-circle');
+      lucide.createIcons();
+    }
+  }
+
+  // Wompi
+  function conectarWompi(btn) {
+    const pill = document.getElementById('wompiStatus');
+    pill.className = 'cfg-status-pill connected';
+    pill.innerHTML = '<span class="cfg-status-dot" style="background:var(--success);"></span>Conectado';
+    btn.style.display = 'none';
+  }
+
+  // Notificaciones
+  const EVENTOS = [
+    { evento: 'Nueva publicación',      sub: 'Al publicar una novedad' },
+    { evento: 'Pago recibido',          sub: 'Comprobante subido por residente' },
+    { evento: 'Pago confirmado',        sub: 'Admin validó el pago' },
+    { evento: 'Pago rechazado',         sub: 'Comprobante inválido' },
+    { evento: 'Pago en mora',           sub: 'Venció sin confirmación' },
+    { evento: 'Reserva solicitada',     sub: 'Nueva solicitud de reserva' },
+    { evento: 'Reserva aprobada',       sub: 'Admin aprobó la reserva' },
+    { evento: 'Reserva rechazada',      sub: 'Admin rechazó la reserva' },
+    { evento: 'Nueva solicitud/queja',  sub: 'Residente envió una solicitud' },
+    { evento: 'Respuesta a solicitud',  sub: 'Admin respondió en el hilo' },
+    { evento: 'Visitante registrado',   sub: 'Acceso en portería registrado' },
+  ];
+  const DEFAULTS = [
+    [true,true,false,false],[true,false,false,true],[false,false,true,true],
+    [false,false,true,true],[true,true,true,false],[true,false,false,false],
+    [false,false,true,true],[false,false,true,true],[true,true,false,false],
+    [false,false,true,false],[true,false,false,false],
+  ];
+  document.getElementById('notifMatriz').innerHTML = EVENTOS.map((e, i) =>
+    `<tr><td><div class="cfg-notif-event">${e.evento}</div><div class="cfg-notif-event-sub">${e.sub}</div></td>${DEFAULTS[i].map(v => `<td><input type="checkbox" class="cfg-checkbox" ${v ? 'checked' : ''} /></td>`).join('')}</tr>`
+  ).join('');
+
+  // Tema
+  let temaSeleccionado = savedTheme || 'light';
+  function seleccionarTema(tema) {
+    temaSeleccionado = tema;
+    document.getElementById('themeLight').classList.toggle('selected', tema === 'light');
+    document.getElementById('themeDark').classList.toggle('selected',  tema === 'dark');
+    document.documentElement.setAttribute('data-theme', tema);
+  }
+  function guardarTema() {
+    localStorage.setItem('fasten-theme', temaSeleccionado);
+  }
+  if (temaSeleccionado === 'dark') {
+    document.getElementById('themeLight').classList.remove('selected');
+    document.getElementById('themeDark').classList.add('selected');
+  }
+
+  lucide.createIcons();
+</script>
 </body>
 </html>

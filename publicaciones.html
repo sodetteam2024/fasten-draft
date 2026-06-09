@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FASTEN — Publicaciones</title>
   <link rel="stylesheet" href="Fasten.css" />
+  <link rel="stylesheet" href="sidebar.css" />
   <style>
     /* ── COMPOSER ── */
     .pub-composer {
@@ -470,64 +471,8 @@
 <body>
 <div class="app-shell">
 
-  <!-- SIDEBAR -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-toggle" onclick="toggleSidebar()"><i data-lucide="chevron-right"></i></div>
-    <div class="sidebar-inner">
-      <div class="sidebar-logo"><div class="logo-mark">F</div><span class="logo-name">FASTEN</span></div>
-      <nav class="sidebar-nav">
-        <a href="index.html"     class="nav-item" data-label="index"><i data-lucide="layout-index"></i><span class="nav-label">Inicio</span></a>
-        <a href="pagos.html"         class="nav-item" data-label="Pagos"><i data-lucide="credit-card"></i><span class="nav-label">Pagos</span><span class="nav-badge">3</span></a>
-        <a href="publicaciones.html" class="nav-item active" data-label="Publicaciones"><i data-lucide="megaphone"></i><span class="nav-label">Publicaciones</span></a>
-        <a href="solicitudes.html"   class="nav-item" data-label="Solicitudes"><i data-lucide="message-square-warning"></i><span class="nav-label">Solicitudes</span><span class="nav-badge">7</span></a>
-        <a href="reservas.html"      class="nav-item" data-label="Reservas"><i data-lucide="calendar-check"></i><span class="nav-label">Reservas</span></a>
-      </nav>
-      <div class="sidebar-divider"></div>
-      <div class="sidebar-footer">
-        <div class="conjunto-info">
-          <div class="conjunto-icon"><i data-lucide="building-2"></i></div>
-          <div class="conjunto-texts"><div class="conjunto-name">Los Pinos</div></div>
-        </div>
-        <div class="user-trigger" id="userTrigger" onclick="toggleUserMenu()">
-          <div class="user-avatar">GP</div>
-          <div class="user-texts"><div class="user-name">Gustavo Petro</div><div class="user-role">Administrador</div></div>
-          <i data-lucide="chevron-up" class="user-chevron"></i>
-          <div class="user-dropdown" id="userDropdown">
-            <div class="dropdown-user-info"><div class="dropdown-user-name">Gustavo Petro</div><div class="dropdown-user-email">gpetro@lospinos.co</div></div>
-            <a href="configuracion.html" class="dropdown-item"><i data-lucide="settings-2"></i>Configuración</a>
-            <div class="dropdown-divider"></div>
-            <div class="dropdown-item danger"><i data-lucide="log-out"></i>Cerrar sesión</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </aside>
-
-  <!-- MOBILE HEADER -->
-  <header class="mobile-header">
-    <div class="mobile-logo"><div class="logo-mark">F</div><span class="mobile-logo-name">FASTEN</span></div>
-    <div class="mobile-header-right">
-      <span class="mobile-conjunto-pill">Los Pinos</span>
-      <div class="mobile-user-btn" id="mobileUserBtn" onclick="toggleMobileMenu()">
-        GP
-        <div class="mobile-user-dropdown" id="mobileUserMenu">
-          <div class="dropdown-user-info"><div class="dropdown-user-name">Gustavo Petro</div><div class="dropdown-user-email">gpetro@lospinos.co</div></div>
-          <a href="configuracion.html" class="dropdown-item"><i data-lucide="settings-2"></i>Configuración</a>
-          <div class="dropdown-divider"></div>
-          <div class="dropdown-item danger"><i data-lucide="log-out"></i>Cerrar sesión</div>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <!-- BOTTOM NAV -->
-  <nav class="bottom-nav">
-    <a href="index.html"     class="bottom-nav-item"><i data-lucide="layout-index"></i><span class="bottom-nav-label">Inicio</span></a>
-    <a href="pagos.html"         class="bottom-nav-item"><i data-lucide="credit-card"></i><span class="bottom-nav-label">Pagos</span><span class="bottom-nav-badge">3</span></a>
-    <a href="publicaciones.html" class="bottom-nav-item active"><i data-lucide="megaphone"></i><span class="bottom-nav-label">Noticias</span></a>
-    <a href="solicitudes.html"   class="bottom-nav-item"><i data-lucide="message-square-warning"></i><span class="bottom-nav-label">Solicitudes</span><span class="bottom-nav-badge">7</span></a>
-    <a href="reservas.html"      class="bottom-nav-item"><i data-lucide="calendar-check"></i><span class="bottom-nav-label">Reservas</span></a>
-  </nav>
+  <div id="sidebar-container"></div>
+  <script src="sidebar.js"></script>
 
   <!-- MAIN -->
   <div class="main-wrapper" id="mainWrapper">
@@ -768,27 +713,10 @@
 <script>
   lucide.createIcons();
 
-  // ── BOILERPLATE ──
-  document.body.classList.add('sidebar-init');
-  const sidebar = document.getElementById('sidebar');
-  function toggleSidebar() { sidebar.classList.toggle('open'); localStorage.setItem('fasten-sidebar', sidebar.classList.contains('open') ? 'open' : 'closed'); }
-  if (localStorage.getItem('fasten-sidebar') === 'open') sidebar.classList.add('open');
-  requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove('sidebar-init')));
-  const userTrigger = document.getElementById('userTrigger');
-  const userDropdown = document.getElementById('userDropdown');
-  function toggleUserMenu() {
-    const isOpen = userDropdown.classList.toggle('open');
-    userTrigger.classList.toggle('menu-open');
-    if (isOpen) { const r = userTrigger.getBoundingClientRect(); userDropdown.style.bottom=(window.innerHeight-r.top+8)+'px'; userDropdown.style.left=r.left+'px'; userDropdown.style.width=Math.max(r.width,210)+'px'; }
-  }
   document.addEventListener('click', e => {
-    if (!userTrigger.contains(e.target)) { userDropdown.classList.remove('open'); userTrigger.classList.remove('menu-open'); }
-    const mb = document.getElementById('mobileUserBtn');
-    if (mb && !mb.contains(e.target)) document.getElementById('mobileUserMenu').classList.remove('open');
     const ftw = document.getElementById('fTagWrap');
     if (ftw && !ftw.contains(e.target)) ftw.classList.remove('open');
   });
-  function toggleMobileMenu() { document.getElementById('mobileUserMenu').classList.toggle('open'); }
   const savedTheme = localStorage.getItem('fasten-theme');
   if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
   function openModal(id)  { document.getElementById(id).classList.add('open'); if(id==='modalConfig') renderCfgTags(); }
